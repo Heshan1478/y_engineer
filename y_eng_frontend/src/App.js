@@ -7,19 +7,18 @@ import Login from './pages/Login';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
+import ProductDetail from './pages/ProductDetail';   // ← NEW
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check current user
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
@@ -32,15 +31,9 @@ function App() {
     setUser(null);
   };
 
-  // Show loading while checking authentication
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <h2>Loading...</h2>
       </div>
     );
@@ -49,104 +42,89 @@ function App() {
   return (
     <Router>
       <div>
-        {/* Navigation Bar - Only show if user is logged in */}
+        {/* Navbar — only when logged in */}
         {user && (
           <nav style={{
             padding: '15px 30px',
             backgroundColor: '#2c3e50',
-            color: 'white',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center'
+            alignItems: 'center',
           }}>
-            <div style={{ display: 'flex', gap: 20 }}>
-              <Link to="/" style={{ color: 'white', textDecoration: 'none', fontWeight: 'bold' }}>
-                Y Engineering
-              </Link>
-              <Link to="/products" style={{ color: 'white', textDecoration: 'none' }}>
-                Products
-              </Link>
-              <Link to="/dashboard" style={{ color: 'white', textDecoration: 'none' }}>
-                Dashboard
-              </Link>
+            <div style={{ display: 'flex', gap: 24 }}>
+              <Link to="/" style={navLink}>Y Engineering</Link>
+              <Link to="/products" style={navLink}>Products</Link>
+              <Link to="/dashboard" style={navLink}>Dashboard</Link>
             </div>
-
-            <div style={{ display: 'flex', gap: 15, alignItems: 'center' }}>
-              <span>Welcome, {user.email}</span>
-              <button 
-                onClick={handleLogout}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#e74c3c',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 5,
-                  cursor: 'pointer'
-                }}
-              >
-                Logout
-              </button>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+              <span style={{ color: '#ccc', fontSize: 14 }}>{user.email}</span>
+              <button onClick={handleLogout} style={logoutBtn}>Logout</button>
             </div>
           </nav>
         )}
 
         {/* Routes */}
         <Routes>
-          {/* Public Routes - Only accessible when NOT logged in */}
-          <Route path="/login" element={
-            user ? <Navigate to="/products" /> : <Login />
-          } />
-          
-          <Route path="/signup" element={
-            user ? <Navigate to="/products" /> : <Signup />
-          } />
-          
-          <Route path="/reset-password" element={
-            user ? <Navigate to="/products" /> : <ResetPassword />
-          } />
+          {/* Public routes */}
+          <Route path="/login"         element={user ? <Navigate to="/products" /> : <Login />} />
+          <Route path="/signup"        element={user ? <Navigate to="/products" /> : <Signup />} />
+          <Route path="/reset-password" element={user ? <Navigate to="/products" /> : <ResetPassword />} />
 
-          {/* Protected Routes - Only accessible when logged in */}
+          {/* Protected routes */}
           <Route path="/" element={
-            user ? (
-              <div style={{ padding: 40, textAlign: 'center' }}>
-                <h1>Welcome to Y Engineering</h1>
-                <p>Your one-stop shop for electrical equipment and repairs</p>
-                <Link to="/products">
-                  <button style={{
-                    padding: '12px 24px',
-                    fontSize: 16,
-                    backgroundColor: '#3498db',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 5,
-                    cursor: 'pointer',
-                    marginTop: 20
-                  }}>
-                    Browse Products
-                  </button>
-                </Link>
-              </div>
-            ) : (
-              <Navigate to="/login" />
-            )
-          } />
-          
-          <Route path="/products" element={
-            user ? <Products /> : <Navigate to="/login" />
-          } />
-          
-          <Route path="/dashboard" element={
-            user ? <Dashboard /> : <Navigate to="/login" />
+            user
+              ? (
+                <div style={{ padding: 40, textAlign: 'center' }}>
+                  <h1>Welcome to Y Engineering</h1>
+                  <p style={{ color: '#666' }}>Your one-stop shop for electrical equipment and repairs</p>
+                  <Link to="/products">
+                    <button style={primaryBtn}>Browse Products</button>
+                  </Link>
+                </div>
+              )
+              : <Navigate to="/login" />
           } />
 
-          {/* Catch all - redirect to login or home based on auth */}
-          <Route path="*" element={
-            <Navigate to={user ? "/" : "/login"} />
-          } />
+          <Route path="/products"       element={user ? <Products />       : <Navigate to="/login" />} />
+          <Route path="/products/:id"   element={user ? <ProductDetail />  : <Navigate to="/login" />} />  {/* ← NEW */}
+          <Route path="/dashboard"      element={user ? <Dashboard />      : <Navigate to="/login" />} />
+
+          {/* Catch all */}
+          <Route path="*" element={<Navigate to={user ? "/" : "/login"} />} />
         </Routes>
       </div>
     </Router>
   );
 }
+
+// ── Inline styles ───────────────────────────────────────────
+const navLink = {
+  color: 'white',
+  textDecoration: 'none',
+  fontWeight: '500',
+  fontSize: 15,
+};
+
+const logoutBtn = {
+  padding: '8px 16px',
+  backgroundColor: '#e74c3c',
+  color: 'white',
+  border: 'none',
+  borderRadius: 6,
+  cursor: 'pointer',
+  fontWeight: '600',
+};
+
+const primaryBtn = {
+  marginTop: 20,
+  padding: '14px 28px',
+  fontSize: 16,
+  backgroundColor: '#e65c00',
+  color: 'white',
+  border: 'none',
+  borderRadius: 8,
+  cursor: 'pointer',
+  fontWeight: '700',
+};
 
 export default App;
