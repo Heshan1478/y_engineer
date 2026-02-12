@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { productAPI } from '../services/api';
 
-export default function ProductDetail() {
+export default function ProductDetail({ user }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
@@ -31,6 +31,11 @@ export default function ProductDetail() {
   };
 
   const handleAddToCart = () => {
+    // If not logged in, redirect to login
+    if (!user) {
+      navigate('/login');
+      return;
+    }
     setCartMsg(`✅ ${quantity} x "${product.name}" added to cart!`);
     // TODO: Implement actual cart logic later
     setTimeout(() => setCartMsg(''), 3000);
@@ -190,11 +195,15 @@ export default function ProductDetail() {
                 cursor: inStock ? 'pointer' : 'not-allowed',
               }}
             >
-              🛒 {inStock ? 'Add to Cart' : 'Out of Stock'}
+              {!inStock
+                ? 'Out of Stock'
+                : !user
+                ? '🔒 Login to Add to Cart'
+                : '🛒 Add to Cart'}
             </button>
 
             <a
-              href="https://wa.me/94703122360?text=Hi, I'm interested in: ${product.name}"
+              href="https://wa.me/94XXXXXXXXX?text=Hi, I'm interested in: ${product.name}"
               target="_blank"
               rel="noreferrer"
               style={styles.whatsappBtn}
