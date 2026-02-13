@@ -1,7 +1,17 @@
 // src/pages/Services.jsx
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
-export default function Services() {
+export default function Services({ user }) {
+  const navigate = useNavigate();
+
+  const handleBookRepair = (serviceType) => {
+    if (!user) {
+      navigate('/login');
+    } else {
+      navigate('/book-repair', { state: { serviceType } });
+    }
+  };
+
   return (
     <div style={{ fontFamily: "'Segoe UI', sans-serif", backgroundColor: '#f8f8f8' }}>
 
@@ -16,7 +26,7 @@ export default function Services() {
         </div>
       </section>
 
-      {/* Services List */}
+      {/* Services List with Book Buttons */}
       <section style={styles.section}>
         <div style={styles.container}>
           <h2 style={styles.sectionTitle}>What We Repair</h2>
@@ -31,6 +41,16 @@ export default function Services() {
                     <li key={j} style={styles.serviceItem}>✓ {item}</li>
                   ))}
                 </ul>
+                <div style={styles.priceTime}>
+                  <span style={styles.price}>From Rs. {s.price}</span>
+                  <span style={styles.time}>⏱ {s.time}</span>
+                </div>
+                <button
+                  onClick={() => handleBookRepair(s.type)}
+                  style={styles.bookBtn}
+                >
+                  {user ? '📋 Book Repair' : '🔒 Login to Book'}
+                </button>
               </div>
             ))}
           </div>
@@ -57,7 +77,7 @@ export default function Services() {
       {/* CTA */}
       <section style={styles.cta}>
         <div style={styles.container}>
-          <h2 style={styles.ctaTitle}>Ready to get your equipment repaired?</h2>
+          <h2 style={styles.ctaTitle}>Need Immediate Help?</h2>
           <p style={styles.ctaSub}>Contact us via WhatsApp or visit our shop.</p>
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
             <a
@@ -81,43 +101,67 @@ export default function Services() {
 
 const services = [
   {
-    icon: '💧', title: 'Water Motor Repair',
+    type: 'Water Motor',
+    icon: '💧',
+    title: 'Water Motor Repair',
     desc: 'Complete repair and maintenance services for all types of water motors.',
     items: ['Single phase motors', 'Three phase motors', 'Submersible pumps', 'Centrifugal pumps'],
+    price: '1,500',
+    time: '1-2 days',
   },
   {
-    icon: '🔫', title: 'Spray Gun Service',
+    type: 'Electric Spray Gun',
+    icon: '🔫',
+    title: 'Spray Gun Service',
     desc: 'Professional servicing and repair of electric spray guns.',
     items: ['Motor replacement', 'Pressure calibration', 'Nozzle repair', 'Full cleaning service'],
+    price: '800',
+    time: '1 day',
   },
   {
-    icon: '🪚', title: 'Chain Saw Repair',
+    type: 'Chain Saw',
+    icon: '🪚',
+    title: 'Chain Saw Repair',
     desc: 'Expert repair for all brands of electric and petrol chain saws.',
     items: ['Chain sharpening', 'Motor overhaul', 'Bar replacement', 'Safety checks'],
+    price: '1,200',
+    time: '1-3 days',
   },
   {
-    icon: '💨', title: 'Compressor Repair',
+    type: 'Compressor',
+    icon: '💨',
+    title: 'Compressor Repair',
     desc: 'Air compressor repair and maintenance for home and industrial use.',
     items: ['Pressure valve repair', 'Motor service', 'Tank inspection', 'Air leakage fix'],
+    price: '2,000',
+    time: '2-3 days',
   },
   {
-    icon: '⚡', title: 'General Electrical',
+    type: 'Electrical Equipment',
+    icon: '⚡',
+    title: 'General Electrical',
     desc: 'General electrical equipment repair and maintenance.',
     items: ['Winding repair', 'Capacitor replacement', 'Switch repair', 'Control panel service'],
+    price: '1,000',
+    time: '1-2 days',
   },
   {
-    icon: '🔧', title: 'Preventive Maintenance',
-    desc: 'Regular maintenance services to keep your equipment running efficiently.',
-    items: ['Lubrication', 'Cleaning & inspection', 'Parts replacement', 'Performance testing'],
+    type: 'Wiring/Switchboard',
+    icon: '🔧',
+    title: 'Wiring & Switchboard',
+    desc: 'Electrical wiring and switchboard repair and installation.',
+    items: ['Circuit repair', 'Switchboard installation', 'Wiring fault detection', 'Safety inspection'],
+    price: '1,500',
+    time: '1 day',
   },
 ];
 
 const steps = [
-  { icon: '📞', title: 'Contact Us',    desc: 'Call or WhatsApp us to describe the issue with your equipment.' },
-  { icon: '📦', title: 'Bring it In',   desc: 'Bring your equipment to our shop. We also offer pickup for large items.' },
-  { icon: '🔍', title: 'Diagnosis',     desc: 'Our technician inspects the equipment and provides a repair quote.' },
-  { icon: '🔧', title: 'Repair',        desc: 'We repair your equipment using quality parts with care and expertise.' },
-  { icon: '✅', title: 'Ready to Go',   desc: 'Pick up your repaired equipment. We offer a service warranty.' },
+  { icon: '📋', title: 'Book Service', desc: 'Choose your service type and describe the issue online.' },
+  { icon: '📦', title: 'Drop-off or Pickup', desc: 'Bring equipment to us or we can pick it up from your location.' },
+  { icon: '🔍', title: 'Diagnosis', desc: 'Our technician inspects and provides a repair quote.' },
+  { icon: '🔧', title: 'Repair', desc: 'We repair using quality parts with care and expertise.' },
+  { icon: '✅', title: 'Ready to Go', desc: 'Pick up your repaired equipment with service warranty.' },
 ];
 
 const styles = {
@@ -148,6 +192,7 @@ const styles = {
   serviceCard: {
     backgroundColor: 'white', borderRadius: 12,
     padding: 28, border: '1px solid #eee',
+    display: 'flex', flexDirection: 'column',
   },
   serviceIcon: { fontSize: 40, marginBottom: 16 },
   serviceTitle: {
@@ -158,10 +203,27 @@ const styles = {
     fontSize: 14, color: '#666', lineHeight: 1.7,
     margin: '0 0 16px 0',
   },
-  serviceList: { paddingLeft: 0, listStyle: 'none', margin: 0 },
+  serviceList: { paddingLeft: 0, listStyle: 'none', margin: '0 0 16px 0', flex: 1 },
   serviceItem: {
     fontSize: 13, color: '#2e7d32', padding: '4px 0',
     borderBottom: '1px solid #f5f5f5',
+  },
+  priceTime: {
+    display: 'flex', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: 16,
+    paddingTop: 16, borderTop: '1px solid #f0f0f0',
+  },
+  price: {
+    fontSize: 18, fontWeight: '800', color: '#E65C00',
+  },
+  time: {
+    fontSize: 13, color: '#888', fontWeight: '500',
+  },
+  bookBtn: {
+    width: '100%', padding: 14, fontSize: 15,
+    backgroundColor: '#E65C00', color: 'white',
+    border: 'none', borderRadius: 8, cursor: 'pointer',
+    fontWeight: '700',
   },
   stepsRow: {
     display: 'grid',
