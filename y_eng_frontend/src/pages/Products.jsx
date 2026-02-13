@@ -1,5 +1,6 @@
 // src/pages/Products.jsx
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { productAPI, categoryAPI } from '../services/api';
 
 export default function Products() {
@@ -9,8 +10,8 @@ export default function Products() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  // Fetch products on component mount
   useEffect(() => {
     fetchProducts();
     fetchCategories();
@@ -59,7 +60,6 @@ export default function Products() {
   const handleSearch = async (e) => {
     const query = e.target.value;
     setSearchQuery(query);
-
     if (query.length > 2) {
       try {
         const response = await productAPI.search(query);
@@ -74,45 +74,35 @@ export default function Products() {
 
   if (loading) {
     return (
-      <div style={{ padding: 20 }}>
+      <div style={{ padding: 20, textAlign: 'center' }}>
         <h2>Loading products...</h2>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Our Products</h1>
+    <div style={styles.page}>
+      <h1 style={styles.title}>Our Products</h1>
 
       {/* Search Bar */}
-      <div style={{ marginBottom: 20 }}>
+      <div style={styles.searchRow}>
         <input
           type="text"
-          placeholder="Search products..."
+          placeholder="🔍  Search products..."
           value={searchQuery}
           onChange={handleSearch}
-          style={{
-            width: '100%',
-            maxWidth: 400,
-            padding: 10,
-            fontSize: 16,
-            border: '1px solid #ddd',
-            borderRadius: 5,
-          }}
+          style={styles.searchInput}
         />
       </div>
 
       {/* Category Filter */}
-      <div style={{ marginBottom: 20, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      <div style={styles.filterRow}>
         <button
           onClick={() => filterByCategory(null)}
           style={{
-            padding: '8px 16px',
-            backgroundColor: selectedCategory === null ? '#007bff' : '#f0f0f0',
-            color: selectedCategory === null ? 'white' : 'black',
-            border: 'none',
-            borderRadius: 5,
-            cursor: 'pointer',
+            ...styles.filterBtn,
+            backgroundColor: selectedCategory === null ? '#e65c00' : '#f0f0f0',
+            color: selectedCategory === null ? 'white' : '#333',
           }}
         >
           All Products
@@ -122,12 +112,9 @@ export default function Products() {
             key={category.id}
             onClick={() => filterByCategory(category.id)}
             style={{
-              padding: '8px 16px',
-              backgroundColor: selectedCategory === category.id ? '#007bff' : '#f0f0f0',
-              color: selectedCategory === category.id ? 'white' : 'black',
-              border: 'none',
-              borderRadius: 5,
-              cursor: 'pointer',
+              ...styles.filterBtn,
+              backgroundColor: selectedCategory === category.id ? '#e65c00' : '#f0f0f0',
+              color: selectedCategory === category.id ? 'white' : '#333',
             }}
           >
             {category.name}
@@ -137,80 +124,209 @@ export default function Products() {
 
       {/* Error Message */}
       {error && (
-        <div style={{ padding: 15, backgroundColor: '#ffe6e6', color: '#d00', borderRadius: 5, marginBottom: 20 }}>
-          {error}
-        </div>
+        <div style={styles.errorBox}>{error}</div>
       )}
 
       {/* Products Grid */}
       {products.length === 0 ? (
-        <p>No products found.</p>
-      ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-            gap: 20,
-          }}
-        >
-          {products.map((product) => (
-            <div
-              key={product.id}
-              style={{
-                border: '1px solid #ddd',
-                borderRadius: 8,
-                padding: 15,
-                backgroundColor: 'white',
-              }}
-            >
-              {/* Product Image Placeholder */}
-              <div
-                style={{
-                  width: '100%',
-                  height: 200,
-                  backgroundColor: '#f0f0f0',
-                  borderRadius: 5,
-                  marginBottom: 10,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#999',
-                }}
-              >
-                {product.name}
-              </div>
-
-              <h3 style={{ margin: '10px 0', fontSize: 18 }}>{product.name}</h3>
-              <p style={{ color: '#666', fontSize: 14, margin: '5px 0' }}>
-                {product.description || 'No description available'}
-              </p>
-              <p style={{ fontSize: 20, fontWeight: 'bold', color: '#007bff', margin: '10px 0' }}>
-                Rs. {product.price}
-              </p>
-              <p style={{ fontSize: 14, color: product.stockQty > 0 ? 'green' : 'red' }}>
-                {product.stockQty > 0 ? `In Stock (${product.stockQty})` : 'Out of Stock'}
-              </p>
-
-              <button
-                disabled={product.stockQty === 0}
-                style={{
-                  width: '100%',
-                  padding: 10,
-                  marginTop: 10,
-                  backgroundColor: product.stockQty > 0 ? '#28a745' : '#ccc',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: 5,
-                  cursor: product.stockQty > 0 ? 'pointer' : 'not-allowed',
-                  fontSize: 16,
-                }}
-              >
-                {product.stockQty > 0 ? 'Add to Cart' : 'Out of Stock'}
-              </button>
-            </div>
-          ))}
+        <div style={styles.emptyBox}>
+          <p style={{ fontSize: 40 }}>📦</p>
+          <h3>No products found</h3>
+          <p style={{ color: '#999' }}>Try a different search or category</p>
         </div>
+      ) : (
+        <>
+          <p style={styles.resultCount}>{products.length} products found</p>
+          <div style={styles.grid}>
+            {products.map((product) => (
+              <div
+                key={product.id}
+                onClick={() => navigate(`/products/${product.id}`)}
+                style={styles.card}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+                }}
+              >
+                {/* Product Image Placeholder */}
+                <div style={styles.imagePlaceholder}>
+                  <span style={{ fontSize: 48 }}>⚙️</span>
+                </div>
+
+                {/* Category Tag */}
+                {product.category && (
+                  <span style={styles.categoryTag}>{product.category.name}</span>
+                )}
+
+                {/* Product Info */}
+                <h3 style={styles.productName}>{product.name}</h3>
+                <p style={styles.productDesc}>
+                  {product.description
+                    ? product.description.length > 60
+                      ? product.description.substring(0, 60) + '...'
+                      : product.description
+                    : 'Click to view details'}
+                </p>
+
+                {/* Price & Stock */}
+                <div style={styles.bottomRow}>
+                  <span style={styles.price}>
+                    Rs. {Number(product.price).toLocaleString()}
+                  </span>
+                  <span style={{
+                    ...styles.stockBadge,
+                    backgroundColor: product.stockQty > 0 ? '#e8f5e9' : '#fce4ec',
+                    color: product.stockQty > 0 ? '#2e7d32' : '#c62828',
+                  }}>
+                    {product.stockQty > 0 ? `In Stock` : 'Out of Stock'}
+                  </span>
+                </div>
+
+                {/* View Details hint */}
+                <div style={styles.viewDetails}>
+                  View Details →
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
 }
+
+// ── Styles ─────────────────────────────────────────────────
+const styles = {
+  page: {
+    maxWidth: 1200,
+    margin: '0 auto',
+    padding: '30px 20px',
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1a1a1a',
+    marginBottom: 24,
+  },
+  searchRow: {
+    marginBottom: 16,
+  },
+  searchInput: {
+    width: '100%',
+    maxWidth: 440,
+    padding: '12px 16px',
+    fontSize: 15,
+    border: '2px solid #e0e0e0',
+    borderRadius: 8,
+    outline: 'none',
+    boxSizing: 'border-box',
+    transition: 'border-color 0.2s',
+  },
+  filterRow: {
+    display: 'flex',
+    gap: 10,
+    flexWrap: 'wrap',
+    marginBottom: 24,
+  },
+  filterBtn: {
+    padding: '8px 18px',
+    border: 'none',
+    borderRadius: 20,
+    fontSize: 14,
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  errorBox: {
+    padding: 16,
+    backgroundColor: '#fce4ec',
+    color: '#c62828',
+    borderRadius: 8,
+    marginBottom: 20,
+    fontWeight: '500',
+  },
+  emptyBox: {
+    textAlign: 'center',
+    padding: '60px 20px',
+    color: '#555',
+  },
+  resultCount: {
+    color: '#999',
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+    gap: 24,
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+    cursor: 'pointer',
+    transition: 'transform 0.2s, box-shadow 0.2s',
+    border: '1px solid #f0f0f0',
+  },
+  imagePlaceholder: {
+    width: '100%',
+    height: 160,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  categoryTag: {
+    display: 'inline-block',
+    backgroundColor: '#fff3e0',
+    color: '#e65c00',
+    padding: '3px 10px',
+    borderRadius: 12,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    margin: '0 0 6px 0',
+  },
+  productDesc: {
+    fontSize: 13,
+    color: '#888',
+    margin: '0 0 14px 0',
+    lineHeight: 1.5,
+  },
+  bottomRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  price: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#e65c00',
+  },
+  stockBadge: {
+    padding: '3px 10px',
+    borderRadius: 12,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  viewDetails: {
+    fontSize: 13,
+    color: '#e65c00',
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+};
