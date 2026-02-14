@@ -13,6 +13,7 @@ import ProductDetail from './pages/ProductDetail';
 import Services  from './pages/Services';
 import About     from './pages/About';
 import Contact   from './pages/Contact';
+import BookRepair from './pages/BookRepair';
 
 // Auth Pages
 import Login         from './pages/Login';
@@ -65,7 +66,7 @@ function App() {
         <Route path="/"              element={<Home />} />
         <Route path="/products"      element={<Products />} />
         <Route path="/products/:id"  element={<ProductDetail user={user} />} />
-        <Route path="/services"      element={<Services />} />
+        <Route path="/services"      element={<Services user={user} />} />
         <Route path="/about"         element={<About />} />
         <Route path="/contact"       element={<Contact />} />
 
@@ -75,6 +76,7 @@ function App() {
         <Route path="/reset-password" element={user ? <Navigate to="/products" /> : <ResetPassword />} />
 
         {/* ── PRIVATE ROUTES (Login required) ──────────── */}
+        <Route path="/book-repair" element={user ? <BookRepair /> : <Navigate to="/login" />} />
         <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
 
         {/* ── CATCH ALL ────────────────────────────────── */}
