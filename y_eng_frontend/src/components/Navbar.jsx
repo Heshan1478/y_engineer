@@ -6,12 +6,12 @@ export default function Navbar({ user }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogout = async () => {
+  const handleLogout = async () => {     //logout function
     await supabase.auth.signOut();
     navigate('/');
   };
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => location.pathname === path;   //highlisht where i currently on
 
   return (
     <nav style={styles.nav}>

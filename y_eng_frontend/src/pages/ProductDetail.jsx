@@ -4,7 +4,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { productAPI } from '../services/api';
 
 export default function ProductDetail({ user }) {
-  const { id } = useParams();
+  const { id } = useParams();                        //geting product id from url (/product/5)
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,7 +19,7 @@ export default function ProductDetail({ user }) {
   const fetchProduct = async () => {
     try {
       setLoading(true);
-      const response = await productAPI.getById(id);
+      const response = await productAPI.getById(id);   //get single product
       setProduct(response.data);
       setError('');
     } catch (err) {
@@ -30,7 +30,7 @@ export default function ProductDetail({ user }) {
     }
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = () => {                 //add to cart logic
     // If not logged in, redirect to login
     if (!user) {
       navigate('/login');
@@ -41,7 +41,7 @@ export default function ProductDetail({ user }) {
     setTimeout(() => setCartMsg(''), 3000);
   };
 
-  const handleQuantityChange = (change) => {
+  const handleQuantityChange = (change) => {    //quantity control
     const newQty = quantity + change;
     if (newQty < 1) return;
     if (newQty > product.stockQty) return;

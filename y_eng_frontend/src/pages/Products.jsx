@@ -12,7 +12,7 @@ export default function Products() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {
+  useEffect(() => {         //get all products and categories
     fetchProducts();
     fetchCategories();
   }, []);
@@ -20,8 +20,8 @@ export default function Products() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await productAPI.getAll();
-      setProducts(response.data);
+      const response = await productAPI.getAll();   //fetch products 
+      setProducts(response.data);                   //products array
       setError('');
     } catch (err) {
       setError('Failed to load products. Make sure backend is running on port 8080.');
@@ -57,7 +57,7 @@ export default function Products() {
     }
   };
 
-  const handleSearch = async (e) => {
+  const handleSearch = async (e) => {      //serach specific product
     const query = e.target.value;
     setSearchQuery(query);
     if (query.length > 2) {
@@ -138,10 +138,10 @@ export default function Products() {
         <>
           <p style={styles.resultCount}>{products.length} products found</p>
           <div style={styles.grid}>
-            {products.map((product) => (
+            {products.map((product) => (                               //navigate to product deatils and cart 
               <div
                 key={product.id}
-                onClick={() => navigate(`/products/${product.id}`)}
+                onClick={() => navigate(`/products/${product.id}`)}   //click on product and naviagate to details
                 style={styles.card}
                 onMouseEnter={e => {
                   e.currentTarget.style.transform = 'translateY(-4px)';
