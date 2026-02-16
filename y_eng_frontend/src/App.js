@@ -15,6 +15,12 @@ import About     from './pages/About';
 import Contact   from './pages/Contact';
 import BookRepair from './pages/BookRepair';
 
+// Cart & Orders
+import Cart from './pages/Cart';
+import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
+import MyOrders from './pages/MyOrders';
+
 // Auth Pages
 import Login         from './pages/Login';
 import Signup        from './pages/Signup';
@@ -77,6 +83,10 @@ function App() {
 
         {/* ── PRIVATE ROUTES (Login required) ──────────── */}
         <Route path="/book-repair" element={user ? <BookRepair /> : <Navigate to="/login" />} />
+        <Route path="/cart" element={user ? <Cart /> : <Navigate to="/login" />} />
+        <Route path="/checkout" element={user ? <Checkout /> : <Navigate to="/login" />} />
+        <Route path="/order-confirmation" element={user ? <OrderConfirmation /> : <Navigate to="/login" />} />
+        <Route path="/my-orders" element={user ? <MyOrders /> : <Navigate to="/login" />} />
         <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
 
         {/* ── CATCH ALL ────────────────────────────────── */}

@@ -1,17 +1,38 @@
 // src/components/Navbar.jsx
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { cartAPI } from '../services/api';
 
 export default function Navbar({ user }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [cartCount, setCartCount] = useState(0);
 
-  const handleLogout = async () => {     //logout function
+  useEffect(() => {
+    if (user) {
+      fetchCartCount();
+    } else {
+      setCartCount(0);
+    }
+  }, [user, location.pathname]);
+
+  const fetchCartCount = async () => {
+    try {
+      const response = await cartAPI.getByUser(user.id);
+      const count = response.data.reduce((total, item) => total + item.quantity, 0);
+      setCartCount(count);
+    } catch (err) {
+      console.error('Error fetching cart count:', err);
+    }
+  };
+
+  const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
   };
 
-  const isActive = (path) => location.pathname === path;   //highlisht where i currently on
+  const isActive = (path) => location.pathname === path;
 
   return (
     <nav style={styles.nav}>
@@ -48,6 +69,14 @@ export default function Navbar({ user }) {
 
         {/* Auth Section */}
         <div style={styles.auth}>
+          {user && (
+            <Link to="/cart" style={styles.cartLink}>
+              🛒
+              {cartCount > 0 && (
+                <span style={styles.cartBadge}>{cartCount}</span>
+              )}
+            </Link>
+          )}
           {user ? (
             <>
               <Link to="/dashboard" style={styles.userEmail}>
@@ -118,6 +147,27 @@ const styles = {
     display: 'flex',
     gap: 10,
     alignItems: 'center',
+  },
+  cartLink: {
+    position: 'relative',
+    fontSize: 24,
+    textDecoration: 'none',
+    padding: '8px 12px',
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: '#E65C00',
+    color: 'white',
+    borderRadius: '50%',
+    width: 20,
+    height: 20,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 11,
+    fontWeight: '800',
   },
   userEmail: {
     color: '#ddd',
