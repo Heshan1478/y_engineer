@@ -203,7 +203,7 @@ export default function ProductDetail({ user }) {
             </button>
 
             <a
-              href="https://wa.me/94XXXXXXXXX?text=Hi, I'm interested in: ${product.name}"
+              href="https://wa.me/94763890902?text=Hi, I'm interested in: ${product.name}"
               target="_blank"
               rel="noreferrer"
               style={styles.whatsappBtn}
