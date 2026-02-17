@@ -2,23 +2,24 @@
 import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
-import { repairAPI } from '../services/api';
+import { repairAPI, orderAPI } from '../services/api';
 
 export default function Dashboard() {
   const location = useLocation();
   const [user, setUser] = useState(null);
   const [repairs, setRepairs] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [successMsg, setSuccessMsg] = useState(location.state?.message || '');
 
   useEffect(() => {
-    fetchUserAndRepairs();
+    fetchUserData();
     if (successMsg) {
       setTimeout(() => setSuccessMsg(''), 5000);
     }
   }, []);
 
-  const fetchUserAndRepairs = async () => {
+  const fetchUserData = async () => {
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -26,8 +27,12 @@ export default function Dashboard() {
 
       if (user) {
         // Fetch user's repair requests
-        const response = await repairAPI.getByUser(user.id);
-        setRepairs(response.data);
+        const repairsResponse = await repairAPI.getByUser(user.id);
+        setRepairs(repairsResponse.data);
+
+        // Fetch user's orders
+        const ordersResponse = await orderAPI.getByUser(user.id);
+        setOrders(ordersResponse.data);
       }
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -38,12 +43,19 @@ export default function Dashboard() {
 
   const getStatusColor = (status) => {
     const colors = {
+      // Repair statuses
       pending: '#FF9800',
       approved: '#2196F3',
       rejected: '#F44336',
       in_progress: '#9C27B0',
       ready: '#4CAF50',
       completed: '#4CAF50',
+      // Order statuses
+      confirmed: '#2196F3',
+      processing: '#9C27B0',
+      shipped: '#00BCD4',
+      delivered: '#4CAF50',
+      cancelled: '#F44336',
     };
     return colors[status] || '#999';
   };
@@ -56,6 +68,11 @@ export default function Dashboard() {
       in_progress: 'In Progress',
       ready: 'Ready for Pickup',
       completed: 'Completed',
+      confirmed: 'Confirmed',
+      processing: 'Processing',
+      shipped: 'Shipped',
+      delivered: 'Delivered',
+      cancelled: 'Cancelled',
     };
     return labels[status] || status;
   };
@@ -85,9 +102,14 @@ export default function Dashboard() {
               Welcome back, <strong>{user?.email}</strong>
             </p>
           </div>
-          <Link to="/book-repair" style={styles.newRepairBtn}>
-            + New Repair Request
-          </Link>
+          <div style={styles.headerButtons}>
+            <Link to="/book-repair" style={styles.repairBtn}>
+              + New Repair Request
+            </Link>
+            <Link to="/my-orders" style={styles.ordersBtn}>
+              📦 View My Orders
+            </Link>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -95,41 +117,116 @@ export default function Dashboard() {
           <div style={styles.statCard}>
             <div style={styles.statIcon}>📋</div>
             <div style={styles.statValue}>{repairs.length}</div>
-            <div style={styles.statLabel}>Total Requests</div>
+            <div style={styles.statLabel}>Repair Requests</div>
+          </div>
+          <div style={styles.statCard}>
+            <div style={styles.statIcon}>📦</div>
+            <div style={styles.statValue}>{orders.length}</div>
+            <div style={styles.statLabel}>Orders Placed</div>
           </div>
           <div style={styles.statCard}>
             <div style={styles.statIcon}>⏳</div>
             <div style={styles.statValue}>
               {repairs.filter(r => r.status === 'pending' || r.status === 'approved').length}
             </div>
-            <div style={styles.statLabel}>Pending</div>
-          </div>
-          <div style={styles.statCard}>
-            <div style={styles.statIcon}>🔧</div>
-            <div style={styles.statValue}>
-              {repairs.filter(r => r.status === 'in_progress').length}
-            </div>
-            <div style={styles.statLabel}>In Progress</div>
+            <div style={styles.statLabel}>Pending Repairs</div>
           </div>
           <div style={styles.statCard}>
             <div style={styles.statIcon}>✅</div>
             <div style={styles.statValue}>
-              {repairs.filter(r => r.status === 'completed').length}
+              {orders.filter(o => o.status === 'delivered').length + 
+               repairs.filter(r => r.status === 'completed').length}
             </div>
             <div style={styles.statLabel}>Completed</div>
           </div>
         </div>
 
-        {/* Repair Requests Table */}
+        {/* Recent Orders Section */}
+        <div style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>Recent Orders</h2>
+            <Link to="/my-orders" style={styles.viewAllLink}>View All →</Link>
+          </div>
+
+          {orders.length === 0 ? (
+            <div style={styles.emptyState}>
+              <p style={{ fontSize: 48, margin: 0 }}>📦</p>
+              <h3 style={{ margin: '16px 0 8px 0' }}>No orders yet</h3>
+              <p style={{ color: '#999', margin: '0 0 24px 0' }}>
+                Start shopping to place your first order
+              </p>
+              <Link to="/products" style={styles.emptyBtn}>
+                Browse Products
+              </Link>
+            </div>
+          ) : (
+            <div style={styles.ordersList}>
+              {orders.slice(0, 3).map((order) => (
+                <div key={order.id} style={styles.orderCard}>
+                  
+                  {/* Order Header */}
+                  <div style={styles.orderHeader}>
+                    <div>
+                      <h3 style={styles.orderNumber}>Order #{order.orderNumber}</h3>
+                      <p style={styles.orderDate}>
+                        {new Date(order.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span 
+                      style={{
+                        ...styles.statusBadge,
+                        backgroundColor: `${getStatusColor(order.status)}22`,
+                        color: getStatusColor(order.status),
+                      }}
+                    >
+                      {getStatusLabel(order.status)}
+                    </span>
+                  </div>
+
+                  {/* Items */}
+                  {order.items && order.items.length > 0 && (
+                    <div style={styles.itemsList}>
+                      {order.items.map((item) => (
+                        <div key={item.id} style={styles.orderItem}>
+                          <span style={styles.itemName}>
+                            {item.productName} <span style={styles.itemQty}>x {item.quantity}</span>
+                          </span>
+                          <span style={styles.itemPrice}>
+                            Rs. {(Number(item.priceAtPurchase) * item.quantity).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Order Footer */}
+                  <div style={styles.orderFooter}>
+                    <div>
+                      <span style={styles.totalLabel}>Total: </span>
+                      <span style={styles.totalAmount}>
+                        Rs. {Number(order.totalAmount).toLocaleString()}
+                      </span>
+                    </div>
+                    <div style={styles.paymentBadge}>
+                      {order.paymentMethod === 'cash_on_delivery' ? '💵 Cash on Delivery' : '🏦 Bank Transfer'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Repair Requests Section */}
         <div style={styles.section}>
           <h2 style={styles.sectionTitle}>My Repair Requests</h2>
 
           {repairs.length === 0 ? (
             <div style={styles.emptyState}>
-              <p style={{ fontSize: 48, margin: 0 }}>📦</p>
+              <p style={{ fontSize: 48, margin: 0 }}>🔧</p>
               <h3 style={{ margin: '16px 0 8px 0' }}>No repair requests yet</h3>
               <p style={{ color: '#999', margin: '0 0 24px 0' }}>
-                Book your first repair service to get started
+                Book a repair service to get started
               </p>
               <Link to="/book-repair" style={styles.emptyBtn}>
                 Book a Repair
@@ -276,13 +373,21 @@ const styles = {
     display: 'flex', justifyContent: 'space-between',
     alignItems: 'center', marginBottom: 32, flexWrap: 'wrap', gap: 16,
   },
+  headerButtons: {
+    display: 'flex', gap: 12, flexWrap: 'wrap',
+  },
   title: {
     fontSize: 32, fontWeight: '800', color: '#1a1a2e',
     margin: '0 0 4px 0',
   },
   subtitle: { fontSize: 16, color: '#666', margin: 0 },
-  newRepairBtn: {
+  repairBtn: {
     display: 'inline-block', backgroundColor: '#E65C00',
+    color: 'white', padding: '12px 24px', borderRadius: 8,
+    textDecoration: 'none', fontWeight: '700', fontSize: 15,
+  },
+  ordersBtn: {
+    display: 'inline-block', backgroundColor: '#2196F3',
     color: 'white', padding: '12px 24px', borderRadius: 8,
     textDecoration: 'none', fontWeight: '700', fontSize: 15,
   },
@@ -303,9 +408,17 @@ const styles = {
   },
   statLabel: { fontSize: 13, color: '#888' },
   section: { marginBottom: 40 },
+  sectionHeader: {
+    display: 'flex', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: 24,
+  },
   sectionTitle: {
     fontSize: 24, fontWeight: '800', color: '#1a1a2e',
-    margin: '0 0 24px 0',
+    margin: 0,
+  },
+  viewAllLink: {
+    color: '#E65C00', textDecoration: 'none',
+    fontSize: 14, fontWeight: '600',
   },
   emptyState: {
     backgroundColor: 'white', borderRadius: 12,
@@ -316,6 +429,53 @@ const styles = {
     display: 'inline-block', backgroundColor: '#E65C00',
     color: 'white', padding: '12px 28px', borderRadius: 8,
     textDecoration: 'none', fontWeight: '700',
+  },
+  ordersList: {
+    display: 'flex', flexDirection: 'column', gap: 16,
+  },
+  orderCard: {
+    backgroundColor: 'white', borderRadius: 12,
+    padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+    border: '1px solid #eee',
+  },
+  orderHeader: {
+    display: 'flex', justifyContent: 'space-between',
+    alignItems: 'flex-start', marginBottom: 16,
+    paddingBottom: 12, borderBottom: '1px solid #f0f0f0',
+  },
+  orderNumber: {
+    fontSize: 16, fontWeight: '700', color: '#1a1a2e',
+    margin: '0 0 4px 0',
+  },
+  orderDate: { fontSize: 13, color: '#999', margin: 0 },
+  statusBadge: {
+    padding: '6px 14px', borderRadius: 20,
+    fontSize: 13, fontWeight: '700',
+  },
+  itemsList: {
+    display: 'flex', flexDirection: 'column', gap: 8,
+    marginBottom: 12,
+  },
+  orderItem: {
+    display: 'flex', justifyContent: 'space-between',
+    padding: '6px 0',
+  },
+  itemName: { fontSize: 14, fontWeight: '600', color: '#333' },
+  itemQty: { color: '#999', fontWeight: '400' },
+  itemPrice: { fontSize: 14, fontWeight: '700', color: '#E65C00' },
+  orderFooter: {
+    display: 'flex', justifyContent: 'space-between',
+    alignItems: 'center', paddingTop: 12,
+    borderTop: '1px solid #f0f0f0',
+  },
+  totalLabel: { fontSize: 13, color: '#666' },
+  totalAmount: {
+    fontSize: 18, fontWeight: '800', color: '#1a1a2e',
+  },
+  paymentBadge: {
+    fontSize: 12, color: '#666',
+    backgroundColor: '#f8f8f8',
+    padding: '4px 10px', borderRadius: 6,
   },
   table: { display: 'flex', flexDirection: 'column', gap: 20 },
   repairCard: {
@@ -333,10 +493,6 @@ const styles = {
   },
   repairBrand: {
     fontSize: 14, color: '#888', margin: 0,
-  },
-  statusBadge: {
-    padding: '6px 14px', borderRadius: 20,
-    fontSize: 13, fontWeight: '700',
   },
   repairDesc: {
     fontSize: 14, color: '#555', lineHeight: 1.7,

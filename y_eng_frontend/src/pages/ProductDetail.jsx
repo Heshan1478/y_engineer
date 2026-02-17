@@ -1,10 +1,11 @@
 // src/pages/ProductDetail.jsx
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { productAPI } from '../services/api';
+import { productAPI, cartAPI } from '../services/api';
+import { supabase } from '../supabaseClient';
 
 export default function ProductDetail({ user }) {
-  const { id } = useParams();                        //geting product id from url (/product/5)
+  const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,7 +20,7 @@ export default function ProductDetail({ user }) {
   const fetchProduct = async () => {
     try {
       setLoading(true);
-      const response = await productAPI.getById(id);   //get single product
+      const response = await productAPI.getById(id);
       setProduct(response.data);
       setError('');
     } catch (err) {
@@ -30,18 +31,25 @@ export default function ProductDetail({ user }) {
     }
   };
 
-  const handleAddToCart = () => {                 //add to cart logic
+  const handleAddToCart = async () => {
     // If not logged in, redirect to login
     if (!user) {
       navigate('/login');
       return;
     }
-    setCartMsg(`✅ ${quantity} x "${product.name}" added to cart!`);
-    // TODO: Implement actual cart logic later
-    setTimeout(() => setCartMsg(''), 3000);
+
+    try {
+      await cartAPI.addItem(user.id, product.id, quantity);
+      setCartMsg(`✅ ${quantity} x "${product.name}" added to cart!`);
+      setTimeout(() => setCartMsg(''), 3000);
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+      setCartMsg('❌ Failed to add to cart');
+      setTimeout(() => setCartMsg(''), 3000);
+    }
   };
 
-  const handleQuantityChange = (change) => {    //quantity control
+  const handleQuantityChange = (change) => {
     const newQty = quantity + change;
     if (newQty < 1) return;
     if (newQty > product.stockQty) return;
