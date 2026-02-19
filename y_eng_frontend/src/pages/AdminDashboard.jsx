@@ -238,28 +238,44 @@ function ProductForm({ product, categories, onClose, onSave }) {
   };
 
   const uploadImage = async () => {
-    if (!imageFile) return form.imageUrl;
+    if (!imageFile) {
+      console.log('No new image file, using existing URL:', form.imageUrl);
+      return form.imageUrl;
+    }
 
+    console.log('📤 Uploading image...');
     setUploading(true);
+    
     try {
       const fileExt = imageFile.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
-      const { error } = await supabase.storage
+      console.log('📁 Uploading to Supabase Storage:', fileName);
+
+      const { data, error } = await supabase.storage
         .from('product-images')
         .upload(fileName, imageFile);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Upload error:', error);
+        throw error;
+      }
 
-      const { data: { publicUrl } } = supabase.storage
+      console.log('✅ Upload successful:', data);
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
         .from('product-images')
         .getPublicUrl(fileName);
 
+      const publicUrl = urlData.publicUrl;
+      console.log('🔗 Public URL:', publicUrl);
+
       return publicUrl;
     } catch (err) {
-      console.error('Error uploading image:', err);
+      console.error('❌ Error uploading image:', err);
       alert('Failed to upload image: ' + err.message);
-      return form.imageUrl;
+      return form.imageUrl; // Return old URL if upload fails
     } finally {
       setUploading(false);
     }
@@ -268,26 +284,42 @@ function ProductForm({ product, categories, onClose, onSave }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log('💾 Starting save process...');
+    
     try {
+      // Upload image first (if new image selected)
       const imageUrl = await uploadImage();
+      
+      console.log('🖼️ Image URL to save:', imageUrl);
 
+      // Prepare product data
       const productData = {
-        ...form,
-        imageUrl,
+        name: form.name,
+        description: form.description,
         price: parseFloat(form.price),
         stockQty: parseInt(form.stockQty),
         categoryId: form.categoryId ? parseInt(form.categoryId) : null,
+        imageUrl: imageUrl || null, // Make sure we include the image URL!
       };
 
+      console.log('📦 Product data to save:', productData);
+
       if (product) {
+        // Update existing product
+        console.log('🔄 Updating product ID:', product.id);
         await productAPI.update(product.id, productData);
+        console.log('✅ Product updated successfully!');
       } else {
+        // Create new product
+        console.log('➕ Creating new product...');
         await productAPI.create(productData);
+        console.log('✅ Product created successfully!');
       }
 
+      alert('Product saved successfully! ✅');
       onSave();
     } catch (err) {
-      console.error('Error saving product:', err);
+      console.error('❌ Error saving product:', err);
       alert('Failed to save product: ' + err.message);
     }
   };
