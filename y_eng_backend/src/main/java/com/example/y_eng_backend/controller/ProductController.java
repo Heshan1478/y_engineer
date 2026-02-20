@@ -8,11 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/products")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3000") // Allow React frontend
 public class ProductController {
 
     @Autowired
@@ -54,14 +53,14 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
-    // POST create new product
+    // POST create new product (Admin only - add security later)
     @PostMapping
     public ResponseEntity<Product> createProduct(@RequestBody Product product) {
         Product createdProduct = productService.createProduct(product);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdProduct);
     }
 
-    // PUT update product - WITH IMAGE URL FIX
+    // PUT update product (Admin only - add security later)
     @PutMapping("/{id}")
     public ResponseEntity<Product> updateProduct(
             @PathVariable Long id,
@@ -74,7 +73,7 @@ public class ProductController {
         }
     }
 
-    // DELETE product
+    // DELETE product (Admin only - add security later)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
         productService.deleteProduct(id);

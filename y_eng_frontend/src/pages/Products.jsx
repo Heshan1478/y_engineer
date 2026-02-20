@@ -12,7 +12,7 @@ export default function Products() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {         //get all products and categories
+  useEffect(() => {
     fetchProducts();
     fetchCategories();
   }, []);
@@ -20,8 +20,8 @@ export default function Products() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await productAPI.getAll();   //fetch products 
-      setProducts(response.data);                   //products array
+      const response = await productAPI.getAll();
+      setProducts(response.data);
       setError('');
     } catch (err) {
       setError('Failed to load products. Make sure backend is running on port 8080.');
@@ -57,7 +57,7 @@ export default function Products() {
     }
   };
 
-  const handleSearch = async (e) => {      //serach specific product
+  const handleSearch = async (e) => {
     const query = e.target.value;
     setSearchQuery(query);
     if (query.length > 2) {
@@ -138,10 +138,10 @@ export default function Products() {
         <>
           <p style={styles.resultCount}>{products.length} products found</p>
           <div style={styles.grid}>
-            {products.map((product) => (                               //navigate to product deatils and cart 
+            {products.map((product) => (
               <div
                 key={product.id}
-                onClick={() => navigate(`/products/${product.id}`)}   //click on product and naviagate to details
+                onClick={() => navigate(`/products/${product.id}`)}
                 style={styles.card}
                 onMouseEnter={e => {
                   e.currentTarget.style.transform = 'translateY(-4px)';
@@ -152,9 +152,25 @@ export default function Products() {
                   e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
                 }}
               >
-                {/* Product Image Placeholder */}
-                <div style={styles.imagePlaceholder}>
-                  <span style={{ fontSize: 48 }}>⚙️</span>
+                {/* Product Image - UPDATED */}
+                <div style={styles.imageContainer}>
+                  {product.imageUrl ? (
+                    <img 
+                      src={product.imageUrl} 
+                      alt={product.name} 
+                      style={styles.productImage}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div style={{
+                    ...styles.placeholderIcon,
+                    display: product.imageUrl ? 'none' : 'flex'
+                  }}>
+                    ⚙️
+                  </div>
                 </div>
 
                 {/* Category Tag */}
@@ -274,16 +290,34 @@ const styles = {
     transition: 'transform 0.2s, box-shadow 0.2s',
     border: '1px solid #f0f0f0',
   },
-  imagePlaceholder: {
+  
+  // ── IMAGE STYLES (NEW) ──
+  imageContainer: {
     width: '100%',
     height: 160,
     backgroundColor: '#f8f8f8',
     borderRadius: 8,
+    marginBottom: 14,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  placeholderIcon: {
+    width: '100%',
+    height: '100%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 14,
+    fontSize: 48,
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
+  
   categoryTag: {
     display: 'inline-block',
     backgroundColor: '#fff3e0',
