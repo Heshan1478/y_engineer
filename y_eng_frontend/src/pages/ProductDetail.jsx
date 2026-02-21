@@ -32,7 +32,6 @@ export default function ProductDetail({ user }) {
   };
 
   const handleAddToCart = async () => {
-    // If not logged in, redirect to login
     if (!user) {
       navigate('/login');
       return;
@@ -56,7 +55,6 @@ export default function ProductDetail({ user }) {
     setQuantity(newQty);
   };
 
-  // ── Loading State ──────────────────────────────────────────
   if (loading) {
     return (
       <div style={styles.centered}>
@@ -66,7 +64,6 @@ export default function ProductDetail({ user }) {
     );
   }
 
-  // ── Error State ────────────────────────────────────────────
   if (error || !product) {
     return (
       <div style={styles.centered}>
@@ -84,27 +81,39 @@ export default function ProductDetail({ user }) {
 
   const inStock = product.stockQty > 0;
 
-  // ── Main Render ────────────────────────────────────────────
   return (
     <div style={styles.page}>
 
-      {/* Breadcrumb */}
       <div style={styles.breadcrumb}>
         <Link to="/products" style={styles.breadcrumbLink}>Products</Link>
         <span style={{ color: '#999', margin: '0 8px' }}>›</span>
         <span style={{ color: '#333' }}>{product.name}</span>
       </div>
 
-      {/* Main Content Card */}
       <div style={styles.card}>
 
-        {/* LEFT: Image */}
         <div style={styles.imageSection}>
-          <div style={styles.imagePlaceholder}>
-            <span style={styles.imageIcon}>⚙️</span>
-            <p style={{ color: '#aaa', marginTop: 8, fontSize: 14 }}>Product Image</p>
+          <div style={styles.imageContainer}>
+            {product.imageUrl ? (
+              <img 
+                src={product.imageUrl} 
+                alt={product.name} 
+                style={styles.productImage}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div style={{
+              ...styles.placeholderContainer,
+              display: product.imageUrl ? 'none' : 'flex'
+            }}>
+              <span style={styles.imageIcon}>⚙️</span>
+              <p style={{ color: '#aaa', marginTop: 8, fontSize: 14 }}>Product Image</p>
+            </div>
           </div>
-          {/* Stock badge on image */}
+          
           <div style={{
             ...styles.stockBadge,
             backgroundColor: inStock ? '#e8f5e9' : '#fce4ec',
@@ -114,29 +123,23 @@ export default function ProductDetail({ user }) {
           </div>
         </div>
 
-        {/* RIGHT: Details */}
         <div style={styles.detailsSection}>
 
-          {/* Category tag */}
           {product.category && (
             <span style={styles.categoryTag}>
               {product.category.name}
             </span>
           )}
 
-          {/* Product Name */}
           <h1 style={styles.productName}>{product.name}</h1>
 
-          {/* Price */}
           <div style={styles.priceRow}>
             <span style={styles.price}>Rs. {Number(product.price).toLocaleString()}</span>
             <span style={styles.tax}>incl. tax</span>
           </div>
 
-          {/* Divider */}
           <hr style={styles.divider} />
 
-          {/* Description */}
           <div style={styles.descriptionSection}>
             <h3 style={styles.sectionTitle}>Description</h3>
             <p style={styles.description}>
@@ -144,10 +147,8 @@ export default function ProductDetail({ user }) {
             </p>
           </div>
 
-          {/* Divider */}
           <hr style={styles.divider} />
 
-          {/* Stock Info */}
           <div style={styles.stockRow}>
             <span style={styles.sectionTitle}>Availability:</span>
             <span style={{
@@ -161,7 +162,6 @@ export default function ProductDetail({ user }) {
             </span>
           </div>
 
-          {/* Quantity Selector — only if in stock */}
           {inStock && (
             <div style={styles.quantityRow}>
               <span style={styles.sectionTitle}>Quantity:</span>
@@ -185,14 +185,12 @@ export default function ProductDetail({ user }) {
             </div>
           )}
 
-          {/* Cart Success Message */}
           {cartMsg && (
             <div style={styles.cartMsg}>
               {cartMsg}
             </div>
           )}
 
-          {/* Action Buttons */}
           <div style={styles.buttonGroup}>
             <button
               onClick={handleAddToCart}
@@ -210,8 +208,8 @@ export default function ProductDetail({ user }) {
                 : '🛒 Add to Cart'}
             </button>
 
-            <a
-              href="https://wa.me/94XXXXXXXXX?text=Hi, I'm interested in: ${product.name}"
+            
+             <a href={`https://wa.me/94763890902?text=Hi, I'm interested in: ${product.name}`}
               target="_blank"
               rel="noreferrer"
               style={styles.whatsappBtn}
@@ -220,7 +218,6 @@ export default function ProductDetail({ user }) {
             </a>
           </div>
 
-          {/* Info Tags */}
           <div style={styles.infoTags}>
             <span style={styles.tag}>🚚 Fast Delivery</span>
             <span style={styles.tag}>🔧 Warranty Included</span>
@@ -230,7 +227,6 @@ export default function ProductDetail({ user }) {
         </div>
       </div>
 
-      {/* Back Button */}
       <button onClick={() => navigate('/products')} style={styles.backBtn}>
         ← Back to Products
       </button>
@@ -239,7 +235,6 @@ export default function ProductDetail({ user }) {
   );
 }
 
-// ── Styles ─────────────────────────────────────────────────
 const styles = {
   page: {
     maxWidth: 1100,
@@ -288,16 +283,32 @@ const styles = {
     minWidth: 280,
     position: 'relative',
   },
-  imagePlaceholder: {
+  imageContainer: {
     width: '100%',
-    height: 320,
+    height: 400,
     backgroundColor: '#f8f8f8',
     borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  placeholderContainer: {
+    width: '100%',
+    height: '100%',
     border: '2px dashed #ddd',
+    borderRadius: 10,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    backgroundColor: '#f8f8f8',
   },
   imageIcon: {
     fontSize: 80,
@@ -310,6 +321,7 @@ const styles = {
     borderRadius: 20,
     fontSize: 13,
     fontWeight: '600',
+    zIndex: 10,
   },
   detailsSection: {
     flex: '1 1 340px',
@@ -441,6 +453,9 @@ const styles = {
     textDecoration: 'none',
     textAlign: 'center',
     cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   infoTags: {
     display: 'flex',

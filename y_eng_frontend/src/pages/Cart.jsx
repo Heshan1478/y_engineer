@@ -86,17 +86,31 @@ export default function Cart() {
         ) : (
           <div style={styles.cartLayout}>
             
-            {/* Cart Items */}
             <div style={styles.itemsSection}>
               {cartItems.map((item) => (
                 <div key={item.id} style={styles.cartItem}>
                   
-                  {/* Product Image */}
-                  <div style={styles.itemImage}>
-                    <span style={{ fontSize: 40 }}>⚙️</span>
+                  {/* Product Image - UPDATED */}
+                  <div style={styles.itemImageContainer}>
+                    {item.product.imageUrl ? (
+                      <img 
+                        src={item.product.imageUrl} 
+                        alt={item.product.name} 
+                        style={styles.itemImg}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div style={{
+                      ...styles.placeholderIcon,
+                      display: item.product.imageUrl ? 'none' : 'flex'
+                    }}>
+                      ⚙️
+                    </div>
                   </div>
 
-                  {/* Product Info */}
                   <div style={styles.itemInfo}>
                     <Link 
                       to={`/products/${item.product.id}`}
@@ -114,7 +128,6 @@ export default function Cart() {
                     </p>
                   </div>
 
-                  {/* Quantity Controls */}
                   <div style={styles.quantitySection}>
                     <div style={styles.quantityControl}>
                       <button
@@ -138,7 +151,6 @@ export default function Cart() {
                     </p>
                   </div>
 
-                  {/* Subtotal */}
                   <div style={styles.subtotalSection}>
                     <p style={styles.subtotal}>
                       Rs. {(Number(item.product.price) * item.quantity).toLocaleString()}
@@ -154,7 +166,6 @@ export default function Cart() {
               ))}
             </div>
 
-            {/* Order Summary */}
             <div style={styles.summarySection}>
               <div style={styles.summaryCard}>
                 <h2 style={styles.summaryTitle}>Order Summary</h2>
@@ -242,11 +253,32 @@ const styles = {
     gap: 20, alignItems: 'center',
     boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
   },
-  itemImage: {
-    width: 80, height: 80, backgroundColor: '#f8f8f8',
-    borderRadius: 8, display: 'flex',
-    alignItems: 'center', justifyContent: 'center',
+  
+  // ── IMAGE STYLES (UPDATED) ──
+  itemImageContainer: {
+    width: 80, height: 80,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    overflow: 'hidden',
+    position: 'relative',
   },
+  itemImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  placeholderIcon: {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 40,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+  },
+  
   itemInfo: { display: 'flex', flexDirection: 'column', gap: 4 },
   itemName: {
     fontSize: 16, fontWeight: '700', color: '#1a1a2e',
