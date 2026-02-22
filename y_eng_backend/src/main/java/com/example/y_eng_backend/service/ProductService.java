@@ -44,16 +44,18 @@ public class ProductService {
         return productRepository.save(product);
     }
 
-    // Update product
+    // Update product - FIXED TO INCLUDE IMAGE_URL
     public Product updateProduct(Long id, Product productDetails) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
 
+        // Update all fields
         product.setName(productDetails.getName());
         product.setDescription(productDetails.getDescription());
         product.setPrice(productDetails.getPrice());
         product.setStockQty(productDetails.getStockQty());
-        product.setCategory(productDetails.getCategory());
+        product.setCategoryId(productDetails.getCategoryId());  // Changed from setCategory
+        product.setImageUrl(productDetails.getImageUrl());      // ← CRITICAL FIX!
 
         return productRepository.save(product);
     }

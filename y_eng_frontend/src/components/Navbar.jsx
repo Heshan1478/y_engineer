@@ -8,24 +8,40 @@ export default function Navbar({ user }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [cartCount, setCartCount] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      fetchCartCount();
-    } else {
-      setCartCount(0);
-    }
-  }, [user, location.pathname]);
+    const checkAdminAndCart = async () => {
+      if (user) {
+        // Fetch cart count
+        try {
+          const response = await cartAPI.getByUser(user.id);
+          const count = response.data.reduce((total, item) => total + item.quantity, 0);
+          setCartCount(count);
+        } catch (err) {
+          console.error('Error fetching cart count:', err);
+        }
 
-  const fetchCartCount = async () => {
-    try {
-      const response = await cartAPI.getByUser(user.id);
-      const count = response.data.reduce((total, item) => total + item.quantity, 0);
-      setCartCount(count);
-    } catch (err) {
-      console.error('Error fetching cart count:', err);
-    }
-  };
+        // Check if admin
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          
+          setIsAdmin(data?.role === 'admin');
+        } catch (err) {
+          console.error('Error checking admin:', err);
+        }
+      } else {
+        setCartCount(0);
+        setIsAdmin(false);
+      }
+    };
+    
+    checkAdminAndCart();
+  }, [user, location.pathname]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -52,6 +68,7 @@ export default function Navbar({ user }) {
             { to: '/services', label: 'Services' },
             { to: '/about',    label: 'About'    },
             { to: '/contact',  label: 'Contact'  },
+            ...(isAdmin ? [{ to: '/admin', label: '🔧 Admin' }] : []),
           ].map(({ to, label }) => (
             <Link
               key={to}

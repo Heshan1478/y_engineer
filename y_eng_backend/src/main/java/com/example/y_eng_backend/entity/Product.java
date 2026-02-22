@@ -3,8 +3,6 @@ package com.example.y_eng_backend.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "products", schema = "public")
@@ -17,6 +15,7 @@ public class Product {
     @Column(nullable = false)
     private String name;
 
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Column(nullable = false)
@@ -25,32 +24,17 @@ public class Product {
     @Column(name = "stock_qty", nullable = false)
     private Integer stockQty;
 
-    // Foreign key to categories
     @Column(name = "category_id")
     private Long categoryId;
 
-    // Many products → one category (for easy fetching)
-    // Keep this but mark the reverse relationship as @JsonIgnore in Category
-    @ManyToOne(fetch = FetchType.EAGER)  // Changed to EAGER so category info is included
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id", insertable = false, updatable = false)
     private Category category;
 
-    // Admin user who created the product
-    @Column(name = "created_by", nullable = false)
-    private UUID createdBy;
-
-    @Column(name = "created_at", nullable = false)
-    private OffsetDateTime createdAt;
-
-    // Automatically set createdAt before insert
-    @PrePersist
-    protected void onCreate() {
-        if (createdAt == null) {
-            createdAt = OffsetDateTime.now();
-        }
-    }
-
-    // Getters & Setters
+    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -99,27 +83,19 @@ public class Product {
         this.categoryId = categoryId;
     }
 
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
     public Category getCategory() {
         return category;
     }
 
     public void setCategory(Category category) {
         this.category = category;
-    }
-
-    public UUID getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(UUID createdBy) {
-        this.createdBy = createdBy;
-    }
-
-    public OffsetDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(OffsetDateTime createdAt) {
-        this.createdAt = createdAt;
     }
 }
