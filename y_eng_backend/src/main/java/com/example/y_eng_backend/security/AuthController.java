@@ -24,19 +24,28 @@ public class AuthController {
             String email = loginRequest.get("email");
             String role = loginRequest.get("role");
 
+            System.out.println("✅ Login request received:");
+            System.out.println("   User ID: " + userId);
+            System.out.println("   Email: " + email);
+            System.out.println("   Role: " + role);
+
             // Validate required fields
             if (userId == null || email == null || role == null) {
+                System.err.println("❌ Missing required fields");
                 return ResponseEntity.badRequest().body("Missing required fields");
             }
 
             // Generate JWT token
             String token = jwtUtil.generateToken(userId, email, role);
+            System.out.println("🔑 JWT token generated successfully");
 
             // Return JWT response
             JwtResponse jwtResponse = new JwtResponse(token, userId, email, role);
             return ResponseEntity.ok(jwtResponse);
 
         } catch (Exception e) {
+            System.err.println("❌ Login error: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(500).body("Error generating token: " + e.getMessage());
         }
     }
@@ -98,6 +107,7 @@ public class AuthController {
             }
 
         } catch (Exception e) {
+            System.err.println("❌ Error in /me endpoint: " + e.getMessage());
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
     }

@@ -30,13 +30,19 @@ export default function AdminDashboard() {
         .eq('id', user.id)
         .single();
 
-      if (!profile || profile.role !== 'admin') {
+      const role = profile?.role || 'customer';
+
+      console.log('🔐 Admin check - Role:', role);
+
+      if (role !== 'admin') {
+        console.log('❌ Not an admin, redirecting to dashboard...');
         navigate('/dashboard');
         return;
       }
 
+      console.log('✅ Admin access granted!');
       setUser(user);
-      setUserRole(profile.role);
+      setUserRole(role);
     } catch (err) {
       console.error('Error checking admin access:', err);
       navigate('/dashboard');
@@ -263,7 +269,6 @@ function ProductForm({ product, categories, onClose, onSave }) {
 
       console.log('✅ Upload successful:', data);
 
-      // Get public URL
       const { data: urlData } = supabase.storage
         .from('product-images')
         .getPublicUrl(fileName);
@@ -275,7 +280,7 @@ function ProductForm({ product, categories, onClose, onSave }) {
     } catch (err) {
       console.error('❌ Error uploading image:', err);
       alert('Failed to upload image: ' + err.message);
-      return form.imageUrl; // Return old URL if upload fails
+      return form.imageUrl;
     } finally {
       setUploading(false);
     }
@@ -287,30 +292,26 @@ function ProductForm({ product, categories, onClose, onSave }) {
     console.log('💾 Starting save process...');
     
     try {
-      // Upload image first (if new image selected)
       const imageUrl = await uploadImage();
       
       console.log('🖼️ Image URL to save:', imageUrl);
 
-      // Prepare product data
       const productData = {
         name: form.name,
         description: form.description,
         price: parseFloat(form.price),
         stockQty: parseInt(form.stockQty),
         categoryId: form.categoryId ? parseInt(form.categoryId) : null,
-        imageUrl: imageUrl || null, // Make sure we include the image URL!
+        imageUrl: imageUrl || null,
       };
 
       console.log('📦 Product data to save:', productData);
 
       if (product) {
-        // Update existing product
         console.log('🔄 Updating product ID:', product.id);
         await productAPI.update(product.id, productData);
         console.log('✅ Product updated successfully!');
       } else {
-        // Create new product
         console.log('➕ Creating new product...');
         await productAPI.create(productData);
         console.log('✅ Product created successfully!');

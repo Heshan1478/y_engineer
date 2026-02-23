@@ -2,6 +2,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Layout
 import Navbar from './components/Navbar';
@@ -88,8 +89,8 @@ function App() {
         <Route path="/checkout" element={user ? <Checkout /> : <Navigate to="/login" />} />
         <Route path="/order-confirmation" element={user ? <OrderConfirmation /> : <Navigate to="/login" />} />
         <Route path="/my-orders" element={user ? <MyOrders /> : <Navigate to="/login" />} />
-        <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
         <Route path="/admin" element={user ? <AdminDashboard /> : <Navigate to="/login" />} />
+        <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
 
         {/* ── CATCH ALL ────────────────────────────────── */}
         <Route path="*" element={<Navigate to="/" />} />

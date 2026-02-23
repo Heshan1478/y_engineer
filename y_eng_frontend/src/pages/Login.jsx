@@ -1,150 +1,231 @@
 // src/pages/Login.jsx
-import { useState } from "react";
-import { supabase } from "../supabaseClient";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
+import { authAPI } from '../services/api';
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [msg, setMsg] = useState("");
-  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setMsg("");
+    setError('');
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      // Step 1: Login with Supabase
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      setMsg(error.message);
+      if (authError) throw authError;
+
+      const user = authData.user;
+
+      // Step 2: Get user's role from profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      const role = profile?.role || 'customer';
+
+      // Step 3: Get JWT token from backend
+      const jwtResponse = await authAPI.login(user.id, user.email, role);
+      const { token } = jwtResponse.data;
+
+      // Step 4: Store JWT token in localStorage
+      localStorage.setItem('jwtToken', token);
+
+      console.log('✅ Login successful! JWT token stored.');
+      console.log('👤 User:', user.email);
+      console.log('🔑 Role:', role);
+
+     // Step 5: Navigate based on role
+        console.log('🚀 Navigating to:', role === 'admin' ? '/admin' : '/dashboard');
+
+        if (role === 'admin') {
+          window.location.href = '/admin';  // Force full page reload
+      } else {
+          window.location.href = '/dashboard';
+      }
+
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.message || 'Failed to login. Please check your credentials.');
+    } finally {
       setLoading(false);
-    } else {
-      setMsg("Login successful! Redirecting...");
-      // Navigate to products page after successful login
-      setTimeout(() => {
-        navigate("/products");
-      }, 1000);
     }
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      minHeight: '100vh',
-      backgroundColor: '#f5f5f5'
-    }}>
-      <div style={{ 
-        maxWidth: 400, 
-        width: '100%',
-        padding: 40,
-        backgroundColor: 'white',
-        borderRadius: 10,
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-      }}>
-        <h1 style={{ textAlign: 'center', marginBottom: 10 }}>Y Engineering</h1>
-        <h2 style={{ textAlign: 'center', marginBottom: 30, fontSize: 20, color: '#666' }}>
-          Login to Your Account
-        </h2>
-        
-        <form onSubmit={handleLogin}>
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', marginBottom: 5, fontWeight: 'bold' }}>
-              Email
-            </label>
-            <input
-              type="email"
-              required
-              style={{ 
-                width: '100%', 
-                padding: 12, 
-                fontSize: 16,
-                border: '1px solid #ddd',
-                borderRadius: 5,
-                boxSizing: 'border-box'
+    <div style={styles.page}>
+      <div style={styles.container}>
+        <div style={styles.card}>
+          
+          <div style={styles.header}>
+            <h1 style={styles.title}>Welcome Back</h1>
+            <p style={styles.subtitle}>Sign in to your account</p>
+          </div>
+
+          {error && (
+            <div style={styles.errorBox}>
+              ⚠️ {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} style={styles.form}>
+            
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Email Address</label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your.email@example.com"
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Password</label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                style={styles.input}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                ...styles.submitBtn,
+                opacity: loading ? 0.6 : 1,
+                cursor: loading ? 'not-allowed' : 'pointer',
               }}
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+
+          </form>
+
+          <div style={styles.footer}>
+            <p style={styles.footerText}>
+              Don't have an account?{' '}
+              <Link to="/signup" style={styles.link}>
+                Sign up here
+              </Link>
+            </p>
           </div>
 
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', marginBottom: 5, fontWeight: 'bold' }}>
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              style={{ 
-                width: '100%', 
-                padding: 12, 
-                fontSize: 16,
-                border: '1px solid #ddd',
-                borderRadius: 5,
-                boxSizing: 'border-box'
-              }}
-              placeholder="Your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          <button 
-            type="submit"
-            disabled={loading}
-            style={{ 
-              width: '100%', 
-              padding: 12,
-              fontSize: 16,
-              backgroundColor: loading ? '#ccc' : '#3498db',
-              color: 'white',
-              border: 'none',
-              borderRadius: 5,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-
-        {msg && (
-          <div style={{ 
-            marginTop: 20, 
-            padding: 12, 
-            backgroundColor: msg.includes('successful') ? '#d4edda' : '#f8d7da',
-            color: msg.includes('successful') ? '#155724' : '#721c24',
-            borderRadius: 5,
-            textAlign: 'center'
-          }}>
-            {msg}
-          </div>
-        )}
-
-        <div style={{ marginTop: 20, textAlign: 'center' }}>
-          <Link to="/reset-password" style={{ color: '#3498db', textDecoration: 'none' }}>
-            Forgot Password?
-          </Link>
-        </div>
-
-        <div style={{ 
-          marginTop: 20, 
-          paddingTop: 20, 
-          borderTop: '1px solid #eee',
-          textAlign: 'center' 
-        }}>
-          <p style={{ margin: 0, color: '#666' }}>
-            Don't have an account?{' '}
-            <Link to="/signup" style={{ color: '#3498db', textDecoration: 'none', fontWeight: 'bold' }}>
-              Sign Up
-            </Link>
-          </p>
         </div>
       </div>
     </div>
   );
 }
+
+const styles = {
+  page: {
+    minHeight: '100vh',
+    backgroundColor: '#f8f8f8',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '20px',
+    fontFamily: "'Segoe UI', sans-serif",
+  },
+  container: {
+    width: '100%',
+    maxWidth: 420,
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 40,
+    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+  },
+  header: {
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1a1a2e',
+    margin: '0 0 8px 0',
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#888',
+    margin: 0,
+  },
+  errorBox: {
+    backgroundColor: '#fce4ec',
+    color: '#c62828',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 20,
+  },
+  formGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+  },
+  input: {
+    padding: 12,
+    fontSize: 15,
+    border: '2px solid #e0e0e0',
+    borderRadius: 8,
+    outline: 'none',
+    transition: 'border-color 0.2s',
+  },
+  submitBtn: {
+    backgroundColor: '#E65C00',
+    color: 'white',
+    padding: 14,
+    fontSize: 16,
+    fontWeight: '700',
+    border: 'none',
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  footer: {
+    marginTop: 24,
+    textAlign: 'center',
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#666',
+    margin: 0,
+  },
+  link: {
+    color: '#E65C00',
+    textDecoration: 'none',
+    fontWeight: '600',
+  },
+};

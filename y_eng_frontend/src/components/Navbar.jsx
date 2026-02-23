@@ -44,9 +44,16 @@ export default function Navbar({ user }) {
   }, [user, location.pathname]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/');
-  };
+  // Clear Supabase session
+  await supabase.auth.signOut();
+  
+  // Clear JWT token
+  localStorage.removeItem('jwtToken');
+  localStorage.removeItem('user');
+  
+  // Navigate to home
+  navigate('/');
+};
 
   const isActive = (path) => location.pathname === path;
 
