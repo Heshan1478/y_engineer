@@ -7,12 +7,13 @@ const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// Add JWT token to all requests
+// ✅ Add JWT to ALL requests
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('jwtToken');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
+      console.log('🔑 JWT attached to:', config.url);
     }
     return config;
   },
@@ -21,20 +22,26 @@ api.interceptors.request.use(
   }
 );
 
-// Handle token expiration
+// ✅ Handle errors gracefully
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      console.warn('⚠️ 401 Unauthorized - redirecting to login');
-      localStorage.removeItem('jwtToken');
-      window.location.href = '/login';
+    if (error.response) {
+      if (error.response.status === 401) {
+        console.warn('⚠️ 401 Unauthorized');
+        localStorage.removeItem('jwtToken');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      } else if (error.response.status === 403) {
+        console.error('❌ 403 Forbidden');
+        alert('Access denied');
+      }
     }
     return Promise.reject(error);
   }
 );
 
-// ─── AUTH API ───────────────────────────────────────────────
 export const authAPI = {
   login: (userId, email, role) => 
     axios.post(`${API_BASE_URL}/auth/login`, { userId, email, role }),
@@ -46,28 +53,20 @@ export const authAPI = {
     api.get('/auth/me'),
 };
 
-// ─── PRODUCT API ────────────────────────────────────────────
 export const productAPI = {
   getAll: () => api.get('/products'),
   getById: (id) => api.get(`/products/${id}`),
   getByCategory: (categoryId) => api.get(`/products/category/${categoryId}`),
   search: (query) => api.get(`/products/search?q=${query}`),
-  getInStock: () => api.get('/products/in-stock'),
   create: (product) => api.post('/products', product),
   update: (id, product) => api.put(`/products/${id}`, product),
   delete: (id) => api.delete(`/products/${id}`),
 };
 
-// ─── CATEGORY API ───────────────────────────────────────────
 export const categoryAPI = {
   getAll: () => api.get('/categories'),
-  getById: (id) => api.get(`/categories/${id}`),
-  create: (category) => api.post('/categories', category),
-  update: (id, category) => api.put(`/categories/${id}`, category),
-  delete: (id) => api.delete(`/categories/${id}`),
 };
 
-// ─── CART API ───────────────────────────────────────────────
 export const cartAPI = {
   getByUser: (userId) => api.get(`/cart/user/${userId}`),
   addItem: (userId, productId, quantity) => 
@@ -78,20 +77,16 @@ export const cartAPI = {
   clearCart: (userId) => api.delete(`/cart/user/${userId}`),
 };
 
-// ─── ORDER API ──────────────────────────────────────────────
 export const orderAPI = {
   getByUser: (userId) => api.get(`/orders/user/${userId}`),
-  getById: (id) => api.get(`/orders/${id}`),
   getAll: () => api.get('/orders'),
   create: (order) => api.post('/orders', order),
   updateStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
 };
 
-// ─── REPAIR API ─────────────────────────────────────────────
 export const repairAPI = {
   getByUser: (userId) => api.get(`/repair-requests/user/${userId}`),
   getAll: () => api.get('/repair-requests'),
-  getById: (id) => api.get(`/repair-requests/${id}`),
   create: (repairRequest) => api.post('/repair-requests', repairRequest),
   updateStatus: (id, status, adminNotes) => 
     api.patch(`/repair-requests/${id}/status`, { status, adminNotes }),

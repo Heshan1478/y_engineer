@@ -2,7 +2,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
-import ProtectedRoute from './components/ProtectedRoute';
 
 // Layout
 import Navbar from './components/Navbar';
@@ -27,12 +26,11 @@ import Login         from './pages/Login';
 import Signup        from './pages/Signup';
 import ResetPassword from './pages/ResetPassword';
 
-// Private Pages
+// Dashboard (works for both customer and admin)
 import Dashboard from './pages/Dashboard';
-import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
-  const [user, setUser]       = useState(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -89,8 +87,12 @@ function App() {
         <Route path="/checkout" element={user ? <Checkout /> : <Navigate to="/login" />} />
         <Route path="/order-confirmation" element={user ? <OrderConfirmation /> : <Navigate to="/login" />} />
         <Route path="/my-orders" element={user ? <MyOrders /> : <Navigate to="/login" />} />
-        <Route path="/admin" element={user ? <AdminDashboard /> : <Navigate to="/login" />} />
+        
+        {/* ── SMART DASHBOARD (Works for both customer and admin) ── */}
         <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" />} />
+        
+        {/* ── REDIRECT /admin to /dashboard ── */}
+        <Route path="/admin" element={<Navigate to="/dashboard" />} />
 
         {/* ── CATCH ALL ────────────────────────────────── */}
         <Route path="*" element={<Navigate to="/" />} />

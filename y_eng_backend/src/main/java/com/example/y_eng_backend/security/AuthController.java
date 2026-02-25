@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -16,7 +17,6 @@ public class AuthController {
     @Autowired
     private JwtUtil jwtUtil;
 
-    // Login endpoint - receives Supabase user data and returns JWT
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> loginRequest) {
         try {
@@ -24,40 +24,44 @@ public class AuthController {
             String email = loginRequest.get("email");
             String role = loginRequest.get("role");
 
-            System.out.println("✅ Login request received:");
+            System.out.println("----------------");
+            System.out.println(" Login request received:");
             System.out.println("   User ID: " + userId);
             System.out.println("   Email: " + email);
             System.out.println("   Role: " + role);
 
-            // Validate required fields
             if (userId == null || email == null || role == null) {
-                System.err.println("❌ Missing required fields");
-                return ResponseEntity.badRequest().body("Missing required fields");
+                System.err.println(" Missing required fields");
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Missing required fields"
+                ));
             }
 
-            // Generate JWT token
             String token = jwtUtil.generateToken(userId, email, role);
-            System.out.println("🔑 JWT token generated successfully");
+            System.out.println("JWT token generated successfully");
+            System.out.println("   Token preview: " + token.substring(0, Math.min(50, token.length())) + "...");
+            System.out.println("--------------");
 
-            // Return JWT response
             JwtResponse jwtResponse = new JwtResponse(token, userId, email, role);
             return ResponseEntity.ok(jwtResponse);
 
         } catch (Exception e) {
             System.err.println("❌ Login error: " + e.getMessage());
             e.printStackTrace();
-            return ResponseEntity.status(500).body("Error generating token: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of(
+                    "error", "Error generating token",
+                    "message", e.getMessage()
+            ));
         }
     }
 
-    // Verify token endpoint - checks if JWT is valid
     @PostMapping("/verify")
     public ResponseEntity<?> verifyToken(@RequestBody Map<String, String> request) {
         try {
             String token = request.get("token");
 
             if (token == null) {
-                return ResponseEntity.badRequest().body("Token is required");
+                return ResponseEntity.badRequest().body(Map.of("valid", false));
             }
 
             boolean isValid = jwtUtil.validateToken(token) && !jwtUtil.isTokenExpired(token);
@@ -78,16 +82,15 @@ public class AuthController {
             }
 
         } catch (Exception e) {
-            return ResponseEntity.ok(Map.of("valid", false, "error", e.getMessage()));
+            return ResponseEntity.ok(Map.of("valid", false));
         }
     }
 
-    // Get current user info from token
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> getCurrentUser(@RequestHeader(value = "Authorization", required = false) String authHeader) {
         try {
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return ResponseEntity.status(401).body("No token provided");
+                return ResponseEntity.status(401).body(Map.of("error", "No token provided"));
             }
 
             String token = authHeader.substring(7);
@@ -103,12 +106,11 @@ public class AuthController {
                         "role", role
                 ));
             } else {
-                return ResponseEntity.status(401).body("Invalid or expired token");
+                return ResponseEntity.status(401).body(Map.of("error", "Invalid token"));
             }
 
         } catch (Exception e) {
-            System.err.println("❌ Error in /me endpoint: " + e.getMessage());
-            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
 }
