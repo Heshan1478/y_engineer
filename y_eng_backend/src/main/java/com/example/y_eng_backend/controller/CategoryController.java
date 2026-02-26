@@ -11,7 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/categories")
-@CrossOrigin(origins = "http://localhost:3000") // Allow React frontend
+@CrossOrigin(origins = "http://localhost:3000")
 public class CategoryController {
 
     @Autowired
@@ -32,30 +32,39 @@ public class CategoryController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // POST create new category (Admin only - add security later)
+    // POST create new category
     @PostMapping
     public ResponseEntity<Category> createCategory(@RequestBody Category category) {
-        Category createdCategory = categoryService.createCategory(category);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
+        try {
+            System.out.println("📝 Creating new category: " + category.getName());
+            Category created = categoryService.createCategory(category);
+            System.out.println("✅ Category created with ID: " + created.getId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+        } catch (Exception e) {
+            System.err.println("❌ Error creating category: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
-    // PUT update category (Admin only - add security later)
+    // PUT update category
     @PutMapping("/{id}")
-    public ResponseEntity<Category> updateCategory(
-            @PathVariable Long id,
-            @RequestBody Category categoryDetails) {
+    public ResponseEntity<Category> updateCategory(@PathVariable Long id, @RequestBody Category category) {
         try {
-            Category updatedCategory = categoryService.updateCategory(id, categoryDetails);
-            return ResponseEntity.ok(updatedCategory);
+            Category updated = categoryService.updateCategory(id, category);
+            return ResponseEntity.ok(updated);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    // DELETE category (Admin only - add security later)
+    // DELETE category
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
-        categoryService.deleteCategory(id);
-        return ResponseEntity.noContent().build();
+        try {
+            categoryService.deleteCategory(id);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 }

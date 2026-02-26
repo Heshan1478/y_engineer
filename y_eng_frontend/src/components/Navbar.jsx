@@ -1,113 +1,80 @@
 // src/components/Navbar.jsx
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { cartAPI } from '../services/api';
 
 export default function Navbar({ user }) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [cartCount, setCartCount] = useState(0);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
-    const checkAdminAndCart = async () => {
-      if (user) {
-        // Fetch cart count
-        try {
-          const response = await cartAPI.getByUser(user.id);
-          const count = response.data.reduce((total, item) => total + item.quantity, 0);
-          setCartCount(count);
-        } catch (err) {
-          console.error('Error fetching cart count:', err);
-        }
+    if (user) {
+      getUserRole();
+    }
+  }, [user]);
 
-        // Check if admin
-        try {
-          const { data } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-          
-          setIsAdmin(data?.role === 'admin');
-        } catch (err) {
-          console.error('Error checking admin:', err);
-        }
-      } else {
-        setCartCount(0);
-        setIsAdmin(false);
-      }
-    };
-    
-    checkAdminAndCart();
-  }, [user, location.pathname]);
+  const getUserRole = async () => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      
+      setUserRole(profile?.role || 'customer');
+    } catch (err) {
+      console.error('Error fetching role:', err);
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem('jwtToken');
     navigate('/');
   };
 
-  const isActive = (path) => location.pathname === path;
-
   return (
-    <nav style={styles.nav}>
-      <div style={styles.inner}>
-
-        {/* Logo */}
+    <nav style={styles.navbar}>
+      <div style={styles.container}>
+        
         <Link to="/" style={styles.logo}>
           <span style={styles.logoIcon}>⚡</span>
-          <span>Yashoda <span style={styles.logoAccent}>Engineers</span></span>
+          <span style={styles.logoText}>
+            Yashoda <span style={styles.logoOrange}>Engineers</span>
+          </span>
         </Link>
 
-        {/* Nav Links */}
         <div style={styles.links}>
-          {[
-            { to: '/',         label: 'Home'     },
-            { to: '/products', label: 'Products' },
-            { to: '/services', label: 'Services' },
-            { to: '/about',    label: 'About'    },
-            { to: '/contact',  label: 'Contact'  },
-            ...(isAdmin ? [{ to: '/admin', label: '🔧 Admin' }] : []),
-          ].map(({ to, label }) => (
-            <Link
-              key={to}
-              to={to}
-              style={{
-                ...styles.link,
-                color: isActive(to) ? '#E65C00' : '#ddd',
-                borderBottom: isActive(to) ? '2px solid #E65C00' : '2px solid transparent',
-              }}
-            >
-              {label}
-            </Link>
-          ))}
-        </div>
-
-        {/* Auth Section */}
-        <div style={styles.auth}>
+          <Link to="/" style={styles.link}>Home</Link>
+          <Link to="/products" style={styles.link}>Products</Link>
+          <Link to="/services" style={styles.link}>Services</Link>
+          <Link to="/about" style={styles.link}>About</Link>
+          <Link to="/contact" style={styles.link}>Contact</Link>
+          
           {user && (
-            <Link to="/cart" style={styles.cartLink}>
-              🛒
-              {cartCount > 0 && (
-                <span style={styles.cartBadge}>{cartCount}</span>
-              )}
+            <Link to="/dashboard" style={{...styles.link, ...styles.dashboardLink}}>
+              {userRole === 'admin' ? '🔧 Dashboard' : '📊 Dashboard'}
             </Link>
           )}
+        </div>
+
+        <div style={styles.actions}>
           {user ? (
             <>
-              <Link to="/dashboard" style={styles.userEmail}>
-                👤 {user.email.split('@')[0]}
+              <Link to="/cart" style={styles.cartBtn}>
+                🛒
               </Link>
-              <button onClick={handleLogout} style={styles.logoutBtn}>
-                Logout
-              </button>
+              <div style={styles.userMenu}>
+                <span style={styles.userName}>👤 {user.email.split('@')[0]}</span>
+                <button onClick={handleLogout} style={styles.logoutBtn}>
+                  Logout
+                </button>
+              </div>
             </>
           ) : (
-            <>
-              <Link to="/login" style={styles.loginBtn}>Login</Link>
-              <Link to="/signup" style={styles.signupBtn}>Sign Up</Link>
-            </>
+            <Link to="/login" style={styles.loginBtn}>
+              Login
+            </Link>
           )}
         </div>
       </div>
@@ -116,106 +83,19 @@ export default function Navbar({ user }) {
 }
 
 const styles = {
-  nav: {
-    backgroundColor: '#1a1a2e',
-    borderBottom: '3px solid #E65C00',
-    position: 'sticky',
-    top: 0,
-    zIndex: 1000,
-  },
-  inner: {
-    maxWidth: 1200,
-    margin: '0 auto',
-    padding: '0 24px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    height: 64,
-  },
-  logo: {
-    color: 'white',
-    textDecoration: 'none',
-    fontSize: 20,
-    fontWeight: '800',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    letterSpacing: '-0.5px',
-  },
-  logoIcon: {
-    fontSize: 24,
-  },
-  logoAccent: {
-    color: '#E65C00',
-  },
-  links: {
-    display: 'flex',
-    gap: 4,
-  },
-  link: {
-    textDecoration: 'none',
-    fontSize: 14,
-    fontWeight: '500',
-    padding: '20px 14px',
-    transition: 'color 0.2s',
-    letterSpacing: '0.3px',
-  },
-  auth: {
-    display: 'flex',
-    gap: 10,
-    alignItems: 'center',
-  },
-  cartLink: {
-    position: 'relative',
-    fontSize: 24,
-    textDecoration: 'none',
-    padding: '8px 12px',
-  },
-  cartBadge: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    backgroundColor: '#E65C00',
-    color: 'white',
-    borderRadius: '50%',
-    width: 20,
-    height: 20,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  userEmail: {
-    color: '#ddd',
-    textDecoration: 'none',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  loginBtn: {
-    color: '#ddd',
-    textDecoration: 'none',
-    fontSize: 14,
-    fontWeight: '600',
-    padding: '8px 16px',
-  },
-  signupBtn: {
-    backgroundColor: '#E65C00',
-    color: 'white',
-    textDecoration: 'none',
-    fontSize: 14,
-    fontWeight: '700',
-    padding: '8px 18px',
-    borderRadius: 6,
-  },
-  logoutBtn: {
-    backgroundColor: 'transparent',
-    color: '#ddd',
-    border: '1px solid #444',
-    borderRadius: 6,
-    padding: '7px 14px',
-    fontSize: 13,
-    cursor: 'pointer',
-    fontWeight: '600',
-  },
+  navbar: { backgroundColor: '#1a1a2e', padding: '16px 0', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 10px rgba(0,0,0,0.3)' },
+  container: { maxWidth: 1400, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  logo: { display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', fontSize: 24, fontWeight: '800' },
+  logoIcon: { fontSize: 28 },
+  logoText: { color: 'white' },
+  logoOrange: { color: '#E65C00' },
+  links: { display: 'flex', gap: 24, alignItems: 'center' },
+  link: { color: 'white', textDecoration: 'none', fontSize: 15, fontWeight: '600', transition: 'color 0.2s' },
+  dashboardLink: { backgroundColor: '#E65C00', padding: '8px 16px', borderRadius: 6 },
+  actions: { display: 'flex', gap: 16, alignItems: 'center' },
+  cartBtn: { position: 'relative', color: 'white', fontSize: 24, textDecoration: 'none' },
+  userMenu: { display: 'flex', gap: 12, alignItems: 'center' },
+  userName: { color: 'white', fontSize: 14 },
+  logoutBtn: { backgroundColor: '#E65C00', color: 'white', padding: '8px 16px', border: 'none', borderRadius: 6, fontSize: 14, fontWeight: '600', cursor: 'pointer' },
+  loginBtn: { backgroundColor: '#E65C00', color: 'white', padding: '10px 24px', border: 'none', borderRadius: 6, fontSize: 15, fontWeight: '700', textDecoration: 'none', display: 'inline-block' },
 };
