@@ -385,7 +385,7 @@ function ProductsTab({ products, categories, onRefresh, showAddForm, setShowAddF
   );
 }
 
-// PRODUCT FORM (same as before)
+// PRODUCT FORM (Updated with Add Category Feature)
 function ProductForm({ product, categories, onClose, onSave }) {
   const [form, setForm] = useState({
     name: product?.name || '',
@@ -398,6 +398,11 @@ function ProductForm({ product, categories, onClose, onSave }) {
   const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState(product?.imageUrl || '');
+  
+  // ✅ NEW: Category creation state
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [creatingCategory, setCreatingCategory] = useState(false);
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -408,6 +413,44 @@ function ProductForm({ product, categories, onClose, onSave }) {
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result);
       reader.readAsDataURL(file);
+    }
+  };
+
+  // ✅ NEW: Create new category
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      alert('Please enter a category name');
+      return;
+    }
+
+    setCreatingCategory(true);
+    try {
+      const response = await categoryAPI.create({ 
+        name: newCategoryName.trim(),
+        description: ''
+      });
+      
+      alert('✅ Category created successfully!');
+      
+      // Select the newly created category
+      setForm({ ...form, categoryId: response.data.id });
+      
+      // Reset form
+      setNewCategoryName('');
+      setShowCategoryForm(false);
+      
+      // Refresh categories list
+      window.location.reload(); // Simple way to refresh, or you can call onSave()
+      
+    } catch (err) {
+      console.error('Error creating category:', err);
+      if (err.response?.data?.message) {
+        alert('Error: ' + err.response.data.message);
+      } else {
+        alert('Failed to create category. It may already exist.');
+      }
+    } finally {
+      setCreatingCategory(false);
     }
   };
 
@@ -510,8 +553,41 @@ function ProductForm({ product, categories, onClose, onSave }) {
             </div>
           </div>
 
+          {/* ✅ UPDATED: Category section with Add New button */}
           <div style={styles.formGroup}>
-            <label style={styles.label}>Category</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <label style={styles.label}>Category</label>
+              <button 
+                type="button" 
+                onClick={() => setShowCategoryForm(!showCategoryForm)} 
+                style={styles.addCategoryBtn}
+              >
+                {showCategoryForm ? '− Cancel' : '+ Add New Category'}
+              </button>
+            </div>
+
+            {/* ✅ NEW: Add category form */}
+            {showCategoryForm && (
+              <div style={styles.newCategoryBox}>
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Enter new category name..."
+                  style={styles.input}
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateCategory}
+                  disabled={creatingCategory}
+                  style={styles.createCategoryBtn}
+                >
+                  {creatingCategory ? 'Creating...' : '✓ Create Category'}
+                </button>
+              </div>
+            )}
+
+            {/* Existing category dropdown */}
             <select name="categoryId" value={form.categoryId} onChange={handleChange} style={styles.select}>
               <option value="">Select category</option>
               {categories.map((cat) => (
@@ -785,4 +861,8 @@ const styles = {
   repairBrand: { fontSize: 14, color: '#888', margin: 0 },
   repairDetails: { marginBottom: 16, fontSize: 14, lineHeight: 1.8 },
   adminNotesBox: { backgroundColor: '#fff3e0', color: '#E65C00', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 14 },
+  addCategoryBtn: { backgroundColor: 'transparent', color: '#E65C00', border: '1px solid #E65C00', padding: '4px 12px', borderRadius: 6, fontSize: 13,fontWeight: '600', cursor: 'pointer',transition: 'all 0.2s'},
+  newCategoryBox: { backgroundColor: '#f8f8f8', padding: 16, borderRadius: 8, marginBottom: 12,display: 'flex',gap: 12,lignItems: 'center'},
+  createCategoryBtn: { backgroundColor: '#4CAF50', color: 'white', padding: '12px 20px', border: 'none', orderRadius: 6, fontSize: 14, fontWeight: '600', cursor: 'pointer',whiteSpace: 'nowrap'},
+
 };

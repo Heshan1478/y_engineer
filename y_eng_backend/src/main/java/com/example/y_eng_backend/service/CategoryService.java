@@ -14,37 +14,35 @@ public class CategoryService {
     @Autowired
     private CategoryRepository categoryRepository;
 
-    // Get all categories
     public List<Category> getAllCategories() {
         return categoryRepository.findAll();
     }
 
-    // Get category by ID
     public Optional<Category> getCategoryById(Long id) {
         return categoryRepository.findById(id);
     }
 
-    // Get category by name
-    public Optional<Category> getCategoryByName(String name) {
-        return categoryRepository.findByName(name);
-    }
-
-    // Create new category
     public Category createCategory(Category category) {
+        // Check if category with same name already exists
+        Optional<Category> existing = categoryRepository.findByName(category.getName());
+        if (existing.isPresent()) {
+            throw new RuntimeException("Category with name '" + category.getName() + "' already exists");
+        }
         return categoryRepository.save(category);
     }
 
-    // Update category
     public Category updateCategory(Long id, Category categoryDetails) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Category not found"));
 
         category.setName(categoryDetails.getName());
+
         return categoryRepository.save(category);
     }
 
-    // Delete category
     public void deleteCategory(Long id) {
-        categoryRepository.deleteById(id);
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Category not found"));
+        categoryRepository.delete(category);
     }
 }

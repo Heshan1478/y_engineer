@@ -63,8 +63,14 @@ export const productAPI = {
   delete: (id) => api.delete(`/products/${id}`),
 };
 
+
+// ─── CATEGORY API ───────────────────────────────────────────
 export const categoryAPI = {
   getAll: () => api.get('/categories'),
+  getById: (id) => api.get(`/categories/${id}`),
+  create: (category) => api.post('/categories', category),  // ✅ ADD THIS
+  update: (id, category) => api.put(`/categories/${id}`, category),
+  delete: (id) => api.delete(`/categories/${id}`),
 };
 
 export const cartAPI = {
