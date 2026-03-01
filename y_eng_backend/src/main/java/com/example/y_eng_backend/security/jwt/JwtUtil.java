@@ -13,7 +13,7 @@ import java.util.Map;
 public class JwtUtil {
 
     // Secret key for signing JWT (change this to a secure random key in production)
-    private static final String SECRET_KEY = "YashodaEngineersSecretKeyForJWTAuthenticationSystem2024";
+    private static final String SECRET_KEY = "YashodaEngineersSecretKeyForJWTAuthenticationSystem2024!YEngr!12";
 
     // Token expiration time (24 hours)
     private static final long EXPIRATION_TIME = 86400000; // 24 hours in milliseconds

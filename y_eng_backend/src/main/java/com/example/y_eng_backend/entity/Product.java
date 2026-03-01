@@ -24,7 +24,7 @@ public class Product {
     @Column(name = "stock_qty", nullable = false)
     private Integer stockQty;
 
-    @Column(name = "category_id")
+    @Column(name = "category_id", nullable = false)  // ← ADDED nullable = false
     private Long categoryId;
 
     @Column(name = "image_url")
