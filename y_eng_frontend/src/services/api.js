@@ -98,4 +98,10 @@ export const repairAPI = {
     api.patch(`/repair-requests/${id}/status`, { status, adminNotes }),
 };
 
+// ─── CHAT API ───────────────────────────────────────────────
+export const chatAPI = {
+  query: (message) => api.post('/chat/query', { message }),
+  getSuggestions: () => api.get('/chat/suggestions'),
+};
+
 export default api;

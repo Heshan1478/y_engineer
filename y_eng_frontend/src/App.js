@@ -6,6 +6,9 @@ import { supabase } from './supabaseClient';
 // Layout
 import Navbar from './components/Navbar';
 
+// ✅ NEW: Chat Widget
+import ChatWidget from './components/ChatWidget';
+
 // Public Pages
 import Home      from './pages/Home';
 import Products  from './pages/Products';
@@ -97,6 +100,9 @@ function App() {
         {/* ── CATCH ALL ────────────────────────────────── */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
+
+      {/* ✅ CHAT WIDGET - Shows on all pages */}
+      <ChatWidget />
     </Router>
   );
 }
