@@ -2,14 +2,18 @@ package com.example.y_eng_backend.service;
 
 import com.example.y_eng_backend.entity.Product;
 import com.example.y_eng_backend.repository.ProductRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,35 +22,36 @@ public class ChatService {
     @Autowired
     private ProductRepository productRepository;
 
-    public Map<String, Object> processQuery(String query) {
+    @Value("${GEMINI_API_KEY}")
+    private String geminiApiKey;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+
+    // ─── MAIN METHOD ─────────────────────────────────────────────
+    public Map<String, Object> processQuery(String userMessage, List<Map<String, String>> history) {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            // Parse user query
-            QueryIntent intent = parseQuery(query.toLowerCase());
+            // Step 1: Get all products from DB
+            List<Product> allProducts = getProducts();
 
-            System.out.println("🔍 Parsed intent:");
-            System.out.println("   Keywords: " + intent.keywords);
-            System.out.println("   Max Price: " + intent.maxPrice);
-            System.out.println("   Min Price: " + intent.minPrice);
-            System.out.println("   Category: " + intent.category);
+            // Step 2: Build product list as text for Gemini
+            String productContext = buildProductContext(allProducts);
 
-            // Search products
-            List<Product> products = searchProducts(intent);
+            // Step 3: Ask Gemini
+            String geminiReply = askGemini(userMessage, history, productContext);
 
-            System.out.println("✅ Found " + products.size() + " products");
+            // Step 4: Extract product IDs Gemini mentioned
+            List<Product> matchedProducts = extractMentionedProducts(geminiReply, allProducts);
 
-            // Generate response message
-            String message = generateResponse(intent, products);
-
-            response.put("message", message);
-            response.put("products", products);
-            response.put("count", products.size());
+            response.put("message", geminiReply);
+            response.put("products", matchedProducts);
+            response.put("count", matchedProducts.size());
 
         } catch (Exception e) {
-            System.err.println("❌ Error in processQuery: " + e.getMessage());
+            System.err.println("❌ ChatService error: " + e.getMessage());
             e.printStackTrace();
-
             response.put("message", "Sorry, I encountered an error. Please try again.");
             response.put("products", new ArrayList<>());
             response.put("count", 0);
@@ -55,243 +60,116 @@ public class ChatService {
         return response;
     }
 
-    private QueryIntent parseQuery(String query) {
-        QueryIntent intent = new QueryIntent();
-
-        try {
-            // Extract price range
-            intent.maxPrice = extractMaxPrice(query);
-            intent.minPrice = extractMinPrice(query);
-
-            // Extract category keywords
-            intent.category = extractCategory(query);
-
-            // Extract general keywords
-            intent.keywords = extractKeywords(query);
-        } catch (Exception e) {
-            System.err.println("❌ Error parsing query: " + e.getMessage());
-        }
-
-        return intent;
-    }
-
-    private BigDecimal extractMaxPrice(String query) {
-        try {
-            // Patterns: "under 6000", "below 5000", "less than 7000", "< 6000"
-            Pattern pattern = Pattern.compile("(?:under|below|less than|<|max|maximum)\\s*(?:rs\\.?\\s*)?([0-9,]+)");
-            Matcher matcher = pattern.matcher(query);
-
-            if (matcher.find()) {
-                String priceStr = matcher.group(1).replace(",", "");
-                return new BigDecimal(priceStr);
-            }
-
-            // Pattern: "6000 or less", "5000 rupees max"
-            pattern = Pattern.compile("([0-9,]+)\\s*(?:or less|max|maximum)");
-            matcher = pattern.matcher(query);
-
-            if (matcher.find()) {
-                String priceStr = matcher.group(1).replace(",", "");
-                return new BigDecimal(priceStr);
-            }
-        } catch (Exception e) {
-            System.err.println("❌ Error extracting max price: " + e.getMessage());
-        }
-
-        return null;
-    }
-
-    private BigDecimal extractMinPrice(String query) {
-        try {
-            // Patterns: "above 3000", "over 4000", "more than 2000", "> 5000"
-            Pattern pattern = Pattern.compile("(?:above|over|more than|>|min|minimum)\\s*(?:rs\\.?\\s*)?([0-9,]+)");
-            Matcher matcher = pattern.matcher(query);
-
-            if (matcher.find()) {
-                String priceStr = matcher.group(1).replace(",", "");
-                return new BigDecimal(priceStr);
-            }
-        } catch (Exception e) {
-            System.err.println("❌ Error extracting min price: " + e.getMessage());
-        }
-
-        return null;
-    }
-
-    private String extractCategory(String query) {
-        try {
-            // Category keywords mapping
-            Map<String, List<String>> categoryMap = new HashMap<>();
-            categoryMap.put("water motors", Arrays.asList("water motor", "water pump", "pump", "motor"));
-            categoryMap.put("chain saws", Arrays.asList("chain saw", "chainsaw", "saw"));
-            categoryMap.put("tools", Arrays.asList("tool", "equipment"));
-            categoryMap.put("pipes", Arrays.asList("pipe", "piping"));
-
-            for (Map.Entry<String, List<String>> entry : categoryMap.entrySet()) {
-                for (String keyword : entry.getValue()) {
-                    if (query.contains(keyword)) {
-                        return entry.getKey();
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("❌ Error extracting category: " + e.getMessage());
-        }
-
-        return null;
-    }
-
-    private List<String> extractKeywords(String query) {
-        try {
-            // Remove common words
-            String[] stopWords = {"show", "me", "find", "get", "i", "need", "want", "looking", "for",
-                    "a", "an", "the", "in", "under", "above", "below", "rs", "rupees",
-                    "price", "budget", "around", "approximately"};
-
-            String[] words = query.split("\\s+");
-            List<String> keywords = new ArrayList<>();
-
-            for (String word : words) {
-                word = word.replaceAll("[^a-z0-9]", "");
-                if (word.length() > 2 && !Arrays.asList(stopWords).contains(word)) {
-                    keywords.add(word);
-                }
-            }
-
-            return keywords;
-        } catch (Exception e) {
-            System.err.println("❌ Error extracting keywords: " + e.getMessage());
-            return new ArrayList<>();
-        }
-    }
-
+    // ─── GET PRODUCTS ─────────────────────────────────────────────
     @Transactional(readOnly = true)
-    private List<Product> searchProducts(QueryIntent intent) {
-        try {
-            // Get all products (read-only transaction)
-            List<Product> allProducts = productRepository.findAll();
-
-            if (allProducts == null || allProducts.isEmpty()) {
-                System.out.println("⚠️ No products found in database");
-                return new ArrayList<>();
-            }
-
-            // Filter in memory to avoid transaction conflicts
-            List<Product> filtered = allProducts.stream()
-                    .filter(product -> matchesIntent(product, intent))
-                    .limit(10)
-                    .collect(Collectors.toList());
-
-            return filtered;
-
-        } catch (Exception e) {
-            System.err.println("❌ Error searching products: " + e.getMessage());
-            e.printStackTrace();
-            return new ArrayList<>();
-        }
+    private List<Product> getProducts() {
+        return productRepository.findAll();
     }
 
-    private boolean matchesIntent(Product product, QueryIntent intent) {
-        try {
-            // Null check for product
-            if (product == null) {
-                return false;
-            }
+    // ─── BUILD PRODUCT LIST FOR GEMINI ───────────────────────────
+    private String buildProductContext(List<Product> products) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Here are the available products in our store:\n\n");
 
-            // Check 1: Price range
-            if (intent.maxPrice != null) {
-                if (product.getPrice() == null) {
-                    return false;
-                }
-                if (product.getPrice().compareTo(intent.maxPrice) > 0) {
-                    return false;
-                }
-            }
-
-            if (intent.minPrice != null) {
-                if (product.getPrice() == null) {
-                    return false;
-                }
-                if (product.getPrice().compareTo(intent.minPrice) < 0) {
-                    return false;
-                }
-            }
-
-            // Check 2: Category (null-safe)
-            if (intent.category != null) {
-                if (product.getCategory() == null) {
-                    return false;
-                }
-
-                String categoryName = product.getCategory().getName();
-                if (categoryName == null) {
-                    return false;
-                }
-
-                if (!categoryName.toLowerCase().contains(intent.category.toLowerCase())) {
-                    return false;
-                }
-            }
-
-            // Check 3: Keywords in name/description (null-safe)
-            if (intent.keywords != null && !intent.keywords.isEmpty()) {
-                String productName = product.getName() != null ? product.getName() : "";
-                String productDesc = product.getDescription() != null ? product.getDescription() : "";
-                String searchText = (productName + " " + productDesc).toLowerCase();
-
-                boolean matchesAny = intent.keywords.stream()
-                        .anyMatch(keyword -> searchText.contains(keyword));
-
-                if (!matchesAny) {
-                    return false;
-                }
-            }
-
-            return true;
-
-        } catch (Exception e) {
-            System.err.println("❌ Error matching product: " + e.getMessage());
-            return false;
+        for (Product p : products) {
+            sb.append("ID:").append(p.getId())
+                    .append(" | Name: ").append(p.getName())
+                    .append(" | Price: Rs.").append(p.getPrice())
+                    .append(" | Category: ").append(p.getCategory() != null ? p.getCategory().getName() : "General")
+                    .append(" | Stock: ").append(p.getStockQty() > 0 ? "In Stock (" + p.getStockQty() + ")" : "Out of Stock")
+                    .append(" | Description: ").append(p.getDescription() != null ? p.getDescription() : "")
+                    .append("\n");
         }
+
+        return sb.toString();
     }
 
-    private String generateResponse(QueryIntent intent, List<Product> products) {
-        try {
-            if (products == null || products.isEmpty()) {
-                return "I couldn't find any products matching your criteria. Try adjusting your budget or search terms.";
+    // ─── CALL GEMINI API ─────────────────────────────────────────
+    private String askGemini(String userMessage, List<Map<String, String>> history, String productContext) throws Exception {
+
+        String systemPrompt = "You are a helpful product assistant for Yashoda Engineers, " +
+                "a shop that sells water motors, electric spray guns, chain saws, compressors, " +
+                "repair parts, hammers, and grinders. " +
+                "When a customer asks about products, recommend specific products from the list below. " +
+                "Always mention the product name and price. Be friendly and helpful. " +
+                "If they ask about repair services, tell them to use the 'Book Repair' option on the website. " +
+                "Keep answers short and clear (2-4 sentences max). " +
+                "At the end of your reply, if you are recommending specific products, write PRODUCT_IDS: " +
+                "followed by comma-separated IDs like: PRODUCT_IDS:1,3,5\n\n" +
+                productContext;
+
+        // Build conversation history for Gemini
+        List<Map<String, Object>> contents = new ArrayList<>();
+
+        // Add chat history
+        if (history != null) {
+            for (Map<String, String> msg : history) {
+                Map<String, Object> content = new HashMap<>();
+                content.put("role", msg.get("role").equals("user") ? "user" : "model");
+                content.put("parts", List.of(Map.of("text", msg.get("text"))));
+                contents.add(content);
             }
-
-            StringBuilder message = new StringBuilder();
-
-            if (products.size() == 1) {
-                message.append("I found 1 product that matches your search:");
-            } else {
-                message.append("I found ").append(products.size()).append(" products");
-
-                if (intent.maxPrice != null) {
-                    message.append(" under Rs. ").append(intent.maxPrice.toPlainString());
-                }
-
-                if (intent.category != null) {
-                    message.append(" in ").append(intent.category);
-                }
-
-                message.append(":");
-            }
-
-            return message.toString();
-
-        } catch (Exception e) {
-            System.err.println("❌ Error generating response: " + e.getMessage());
-            return "I found some products for you:";
         }
+
+        // Add current user message
+        Map<String, Object> userContent = new HashMap<>();
+        userContent.put("role", "user");
+        userContent.put("parts", List.of(Map.of("text", userMessage)));
+        contents.add(userContent);
+
+        // Build full request body
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("system_instruction", Map.of("parts", List.of(Map.of("text", systemPrompt))));
+        requestBody.put("contents", contents);
+
+        String jsonBody = objectMapper.writeValueAsString(requestBody);
+
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiApiKey;
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                .build();
+
+        HttpResponse<String> httpResponse = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        System.out.println("🤖 Gemini status: " + httpResponse.statusCode());
+
+        if (httpResponse.statusCode() != 200) {
+            System.err.println("Gemini error: " + httpResponse.body());
+            return "Sorry, I couldn't process your request right now. Please try again.";
+        }
+
+        // Parse response
+        JsonNode root = objectMapper.readTree(httpResponse.body());
+        return root.path("candidates").get(0)
+                .path("content").path("parts").get(0)
+                .path("text").asText();
     }
 
-    // Inner class for query intent
-    private static class QueryIntent {
-        BigDecimal maxPrice;
-        BigDecimal minPrice;
-        String category;
-        List<String> keywords = new ArrayList<>();
+    // ─── EXTRACT PRODUCT IDs FROM GEMINI REPLY ───────────────────
+    private List<Product> extractMentionedProducts(String reply, List<Product> allProducts) {
+        try {
+            // Look for "PRODUCT_IDS:1,3,5" pattern
+            if (reply.contains("PRODUCT_IDS:")) {
+                String idsPart = reply.split("PRODUCT_IDS:")[1].trim();
+                // Take only first line in case there's text after
+                idsPart = idsPart.split("\n")[0].trim();
+
+                Set<Long> ids = Arrays.stream(idsPart.split(","))
+                        .map(String::trim)
+                        .filter(s -> s.matches("\\d+"))
+                        .map(Long::parseLong)
+                        .collect(Collectors.toSet());
+
+                return allProducts.stream()
+                        .filter(p -> ids.contains(p.getId()))
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            System.err.println("Could not extract product IDs: " + e.getMessage());
+        }
+        return new ArrayList<>();
     }
 }

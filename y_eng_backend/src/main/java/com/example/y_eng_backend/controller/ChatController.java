@@ -17,22 +17,23 @@ public class ChatController {
     private ChatService chatService;
 
     @PostMapping("/query")
-    public ResponseEntity<?> handleQuery(@RequestBody Map<String, String> request) {
+    public ResponseEntity<?> handleQuery(@RequestBody Map<String, Object> request) {
         try {
-            String userQuery = request.get("message");
+            String userMessage = (String) request.get("message");
 
-            System.out.println("💬 Chat query received: " + userQuery);
+            // Get conversation history from frontend
+            List<Map<String, String>> history = (List<Map<String, String>>) request.getOrDefault("history", List.of());
 
-            Map<String, Object> response = chatService.processQuery(userQuery);
+            System.out.println("💬 Chat query: " + userMessage);
+
+            Map<String, Object> response = chatService.processQuery(userMessage, history);
 
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            System.err.println("❌ Error in chat query: " + e.getMessage());
-            e.printStackTrace();
-
+            System.err.println("❌ Chat error: " + e.getMessage());
             return ResponseEntity.status(500).body(Map.of(
-                    "message", "Sorry, I encountered an error. Please try again.",
+                    "message", "Sorry, I encountered an error.",
                     "products", List.of(),
                     "count", 0
             ));
@@ -41,20 +42,12 @@ public class ChatController {
 
     @GetMapping("/suggestions")
     public ResponseEntity<?> getSuggestions() {
-        try {
-            List<String> suggestions = List.of(
-                    "Show me water pumps under Rs. 6000",
-                    "I need a motor for home use",
-                    "What chain saws do you have?",
-                    "Show all products in stock",
-                    "Pumps with 1HP power"
-            );
-
-            return ResponseEntity.ok(Map.of("suggestions", suggestions));
-
-        } catch (Exception e) {
-            System.err.println("❌ Error getting suggestions: " + e.getMessage());
-            return ResponseEntity.status(500).body(Map.of("suggestions", List.of()));
-        }
+        return ResponseEntity.ok(Map.of("suggestions", List.of(
+                "Show me water pumps under Rs. 6000",
+                "What's the best motor for home use?",
+                "Compare your compressors",
+                "Which chainsaw do you recommend?",
+                "Show products under Rs. 10000"
+        )));
     }
 }
