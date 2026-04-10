@@ -57,13 +57,22 @@ export default function ChatWidget() {
     setLoading(true);
 
     try {
-      const response = await chatAPI.query(messageText);
-      const { message, products, count } = response.data;
+      // Build history to send to backend (last 6 messages for context)
+      const historyToSend = messages.slice(-6).map(msg => ({
+        role: msg.type === 'user' ? 'user' : 'model',
+        text: msg.text
+      }));
+
+      const response = await chatAPI.query(messageText, historyToSend);
+      const { message, products } = response.data;
+
+      // Remove PRODUCT_IDS line from displayed message
+      const cleanMessage = message.replace(/PRODUCT_IDS:[\d,\s]*/g, '').trim();
 
       const botMessage = {
         id: Date.now() + 1,
         type: 'bot',
-        text: message,
+        text: cleanMessage,
         products: products || [],
         timestamp: new Date()
       };
@@ -72,15 +81,12 @@ export default function ChatWidget() {
 
     } catch (err) {
       console.error('Chat error:', err);
-      
-      const errorMessage = {
+      setMessages(prev => [...prev, {
         id: Date.now() + 1,
         type: 'bot',
-        text: "Sorry, I encountered an error. Please try again.",
+        text: "Sorry, I couldn't connect. Please try again.",
         timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
+      }]);
     } finally {
       setLoading(false);
     }
