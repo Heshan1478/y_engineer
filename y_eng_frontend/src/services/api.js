@@ -100,8 +100,7 @@ export const repairAPI = {
 
 // ─── CHAT API ───────────────────────────────────────────────
 export const chatAPI = {
-  query: (message) => api.post('/chat/query', { message }),
+  query: (message, history = []) => api.post('/chat/query', { message, history }),
   getSuggestions: () => api.get('/chat/suggestions'),
 };
-
 export default api;
