@@ -4,6 +4,7 @@ import com.example.y_eng_backend.service.ChatService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.example.y_eng_backend.service.ProductEmbeddingService;
 
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,8 @@ public class ChatController {
 
     @Autowired
     private ChatService chatService;
+    @Autowired
+    private ProductEmbeddingService productEmbeddingService;
 
     @PostMapping("/query")
     public ResponseEntity<?> handleQuery(@RequestBody Map<String, Object> request) {
@@ -49,5 +52,18 @@ public class ChatController {
                 "Which chainsaw do you recommend?",
                 "Show products under Rs. 10000"
         )));
+    }
+
+    // Admin endpoint to generate embeddings for all products
+    @PostMapping("/generate-embeddings")
+    public ResponseEntity<?> generateEmbeddings() {
+        try {
+            System.out.println("🚀 Starting embedding generation...");
+            String result = productEmbeddingService.generateAllEmbeddings();
+            return ResponseEntity.ok(Map.of("result", result));
+        } catch (Exception e) {
+            System.err.println("❌ Error: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 }
